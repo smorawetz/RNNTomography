@@ -1,0 +1,6 @@
+# Ignore contents of results, training and legacy folders
+results/*
+!results/.gitkeep
+training/*
+!training/.gitkeep
+legacy
