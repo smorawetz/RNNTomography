@@ -377,7 +377,7 @@ class PositiveWaveFunction(nn.Module):
         half_spins = num_spins // 2
         plus1_if_odd = num_spins % 2  # +1 to up spin threshold if odd total
         self.thresh_up = half_spins + plus1_if_odd + self.fixed_mag // 2
-        self.thresh_down = half_spins - self.fixed_mag // 2
+        self.thresh_dn = half_spins - self.fixed_mag // 2
 
         # Initialize FC layer
         self.lin_trans = nn.Linear(num_hidden, input_dim)
@@ -413,18 +413,41 @@ class PositiveWaveFunction(nn.Module):
         inputs = init_state.repeat(num_samples, 1)
         self.hidden = self.init_hidden(mod_batch_size=num_samples)
 
+        # Define tensors to keep track of up and down spins
+        cum_up_spins = torch.zeros(num_samples)
+        cum_dn_spins = torch.zeros(num_samples)
+
+        # These represent NN outputs which guarantee up and down spins resp.
+        up_certain = one_hot(0).unsqueeze(0).repeat(num_samples, 1)
+        dn_certain = one_hot(1).unsqueeze(0).repeat(num_samples, 1)
+
         for spin_num in range(self.num_spins):
             for _ in range(self.num_layers):
                 # Output is num_samples x num_hidden
                 self.hidden = self.cell(inputs, self.hidden)
 
             # Linear transformation, then softmax to output
-            probs = F.softmax(self.lin_trans(self.hidden), dim=1)
+            outputs = F.softmax(self.lin_trans(self.hidden), dim=1)
+
+            # Kill probabilities if quote of up/down spins reached
+            up_part = up_certain * outputs 
+            up_part *= np.heaviside(self.thresh_up - cum_up_spins, 0).unsqueeze(1)
+            dn_part = dn_certain * outputs
+            dn_part *= np.heaviside(self.thresh_dn - cum_dn_spins, 0).unsqueeze(1)
+            probs = up_part + dn_part
+
+            probs /= torch.sum(probs, dim=1).unsqueeze(1)  # renormalize
+
             sample_dist = torch.distributions.Categorical(probs)
             gen_samples = sample_dist.sample()
+
             # Add samples to tensor and feed them as next inputs
             inputs = one_hot(gen_samples)
             samples[spin_num, :, :] = inputs
+
+            # Add generated samples to cumulative up and down spins
+            cum_up_spins += 1 - gen_samples 
+            cum_dn_spins += gen_samples
 
         return samples
 
@@ -440,20 +463,17 @@ class PositiveWaveFunction(nn.Module):
         """
         # Hack to get fidelities and samples with forward pass
         batch_size = mod_batch_size if mod_batch_size else self.batch_size
+
         # Initialize hidden units
         self.hidden = self.init_hidden(mod_batch_size=mod_batch_size)
 
-        cum_up_spins = torch.cumsum(data_in[:, :, 0], dim=0)
-        cum_up_spins = cum_up_spins.unsqueeze(2).repeat(1, 1, 2)
-        cum_down_spins = torch.cumsum(data_in[:, :, 1], dim=0)
-        cum_down_spins = cum_down_spins.unsqueeze(2).repeat(1, 1, 2)
-
-        # cum_up_spins = torch.zeros(batch_size)
-        # cum_down_spins = torch.zeros(batch_size)
+        # Define tensors to keep track of up and down spins
+        cum_up_spins = torch.zeros(batch_size)
+        cum_dn_spins = torch.zeros(batch_size)
 
         # These represent NN outputs which guarantee up and down spins resp.
         up_certain = one_hot(0).unsqueeze(0).repeat(batch_size, 1)
-        down_certain = one_hot(1).unsqueeze(0).repeat(batch_size, 1)
+        dn_certain = one_hot(1).unsqueeze(0).repeat(batch_size, 1)
 
         # Replace first spin with fixed state, shift others "right" so that
         # networks makes predictions s_0 -> s_1, s_1 -> s_2, ... s_N-1 -> s_N
@@ -462,8 +482,7 @@ class PositiveWaveFunction(nn.Module):
         data[0, :, :] = init_state.repeat(batch_size, 1)
         data[1:, :, :] = temp_data
 
-        # Initialize tensor to hold NN outputs
-
+        # Initialize tensors to hold NN outputs
         probs = torch.zeros((self.num_spins, batch_size, self.input_dim))
         corr_probs = torch.zeros((self.num_spins, batch_size, self.input_dim))
 
@@ -475,32 +494,19 @@ class PositiveWaveFunction(nn.Module):
             # Linear transformation, then softmax to output
             probs[spin_num, :, :] = F.softmax(self.lin_trans(self.hidden), dim=1)
 
-            # if spin_num != 0:
-            #     cum_up_spins += data[spin_num - 1, :, 0]
-            #     cum_down_spins += data[spin_num - 1, :, 1]
-            #     up_part = up_certain * probs[spin_num, :, :]
-            #     up_part *= np.heaviside(self.thresh_up - cum_up_spins, 0).unsqueeze(1)
-            #     down_part = down_certain * probs[spin_num, :, :]
-            #     down_part *= np.heaviside(
-            #         self.thresh_down - cum_down_spins, 0
-            #     ).unsqueeze(1)
-            #     corr_probs[spin_num, :, :] = up_part + down_part
-
-            if spin_num != 0:  # check for each spin whether enforcement needed
-                corr_probs[spin_num, :, :] = torch.where(
-                    cum_up_spins[spin_num - 1, :, :] >= self.thresh_up,
-                    down_certain * probs[spin_num, :, :],
-                    probs[spin_num, :, :],
-                )
-                corr_probs[spin_num, :, :] = torch.where(
-                    cum_down_spins[spin_num - 1, :, :] >= self.thresh_down,
-                    up_certain * corr_probs[spin_num, :, :],
-                    corr_probs[spin_num, :, :],
-                )
+            if spin_num != 0:
+                # Index current spin since data already shifted "right"
+                cum_up_spins += data[spin_num, :, 0]
+                cum_dn_spins += data[spin_num, :, 1]
+                up_part = up_certain * probs[spin_num, :, :]
+                up_part *= np.heaviside(self.thresh_up - cum_up_spins, 0).unsqueeze(1)
+                dn_part = dn_certain * probs[spin_num, :, :]
+                dn_part *= np.heaviside(self.thresh_dn - cum_dn_spins, 0).unsqueeze(1)
+                corr_probs[spin_num, :, :] = up_part + dn_part
 
         corr_probs[0, :, :] = probs[0, :, :]  # first spin unchanged
 
-        # Renormalize after step function kills impossible probabilities
+        # Renormalize after step function kills impossible spins
         corr_probs /= torch.sum(corr_probs, dim=2).unsqueeze(2)
 
         return corr_probs
