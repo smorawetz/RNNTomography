@@ -25,7 +25,7 @@ wide_init = False
 
 # Define training parameters
 batch_size = 50  # size of mini_batches of data
-num_epochs = 1000  # number of epochs of training to perform
+num_epochs = 2500  # number of epochs of training to perform
 # optimizer = optim.SGD  # what optimizer to use
 optimizer = optim.Adadelta
 # lr = 0.001  # learning rate
@@ -35,21 +35,25 @@ lr = 0.1
 num_samples = 100  # number of samples to average energy over
 period = 5  # calculate training evaluators (e.g. epoch) every period epochs
 
+# Flag whether to make certain plots
+plot_coeffs = False  # plot wavefunction coefficients at different epochs
+plot_avg_grad_per_param = False  # plot avg. grad. per parameter type
+plot_max_grad_per_param = False  # plot max grad. per parameter type
+plot_avg_grad_vs_mag = False  # plot avg. grad. vs. sample mag. per param type
+plot_sample_tree = False  # make binary tree of probs. showing sampling probs
+
+# Define numerical parameters
 torch.set_default_tensor_type(torch.DoubleTensor)
 torch.manual_seed(0)
 
 
 # Information about where to find data
 data_name = "xy"
-samples_path = "../../../generating_data/data_generated/N{0}_{1}_samples.txt".format(
-    num_spins, data_name
-)
-state_path = "../../../generating_data/data_generated/N{0}_{1}_groundstate.txt".format(
-    num_spins, data_name
-)
-energy_path = "../../../generating_data/data_generated/N{0}_{1}_energy.txt".format(
-    num_spins, data_name
-)
+folder_path = "../../../generating_data/data_generated"
+
+samples_path = "{0}/N{1}_{2}_samples.txt".format(folder_path, num_spins, data_name)
+state_path = "{0}/N{1}_{2}_groundstate.txt".format(folder_path, num_spins, data_name)
+energy_path = "{0}/N{1}_{2}_energy.txt".format(folder_path, num_spins, data_name)
 
 # If data is for one spin, add second dimension to array
 samples = torch.Tensor(np.loadtxt(samples_path))
@@ -62,7 +66,7 @@ true_energy = np.loadtxt(energy_path).item()
 
 # Name chosen for this model to store data under
 wide_suffix = "_wide_init" if wide_init else ""
-model_name = "{0}_enforce_symm".format(data_name)
+model_name = "{0}_enforce_symm{1}".format(data_name, wide_suffix)
 
 
 # Apply one-hot encoding to sample data
@@ -155,13 +159,14 @@ for epoch in range(1, num_epochs + 1):
             max_grads[par_num] += par.grad.abs().max()
 
         # Tracking magnetizations effect on gradients
-        mags_array[epoch - 1, batch_start : batch_start + batch_size] = torch.sum(
-            1 - 2 * batch, dim=0
-        )
-        for par_num, par in enumerate(model.parameters()):
-            mag_grads_array[
-                epoch - 1, batch_start : batch_start + batch_size, par_num
-            ] = par.grad.abs().mean()
+        if plot_avg_grad_vs_mag:
+            mags_array[epoch - 1, batch_start : batch_start + batch_size] = torch.sum(
+                1 - 2 * batch, dim=0
+            )
+            for par_num, par in enumerate(model.parameters()):
+                mag_grads_array[
+                    epoch - 1, batch_start : batch_start + batch_size, par_num
+                ] = par.grad.abs().mean()
 
         optimizer.step()  # update gradients
 
@@ -189,30 +194,31 @@ for epoch in range(1, num_epochs + 1):
         max_grads_array[index - 1, :] = max_grads / samples_per_batch
 
 
+# ---- Saving important training info and parametrized NN state ----
+
+
 # Make folder to store outputs if it does not already exist
-if not os.path.exists("../results/{0}_results/".format(model_name)):
-    os.makedirs("../results/{0}_results/".format(model_name))
+results_path = "../results/{0}_results".format(model_name)
+study_path = "../results/{0}_results/N{1}_nh{2}_lr{3}_ep{4}".format(
+    model_name, num_spins, num_hidden, lr, num_epochs
+)
 
-if not os.path.exists(
-    "../results/{0}_results/N{1}_nh{2}_lr{3}_ep{4}/N{1}_nh{2}_lr{3}_ep{4}".format(
-        model_name, num_spins, num_hidden, lr, num_epochs
-    )
-):
-    os.makedirs(
-        "../results/{0}_results/N{1}_nh{2}_lr{3}_ep{4}/N{1}_nh{2}_lr{3}_ep{4}".format(
-            model_name, num_spins, num_hidden, lr, num_epochs
-        )
-    )
+if not os.path.exists(results_path):
+    os.makedirs(results_path)
 
-store_array = np.zeros((num_epochs // period + 1, 4))
+if not os.path.exists(study_path):
+    os.makedirs(study_path)
+
+store_array = np.zeros((num_epochs // period + 1, 5))
 store_array[:, 0] = np.arange(num_epochs // period + 1)
 store_array[:, 1] = fidelity_array
 store_array[:, 2] = div_array
 store_array[:, 3] = energy_array
+store_array[1:, 4] = loss_array
 
 np.savetxt(
-    "../results/{0}_results/N{1}_nh{2}_lr{3}_ep{4}/training_results_rnn_{0}_N{1}_nh{2}_lr{3}_ep{4}.txt".format(
-        model_name, num_spins, num_hidden, lr, num_epochs
+    "{0}/training_results_rnn_{1}_N{2}_nh{3}_lr{4}_ep{5}.txt".format(
+        study_path, model_name, num_spins, num_hidden, lr, num_epochs
     ),
     store_array,
 )
@@ -222,156 +228,48 @@ np.savetxt(
 model_data = model.state_dict()
 torch.save(
     model_data,
-    "../results/{0}_results/N{1}_nh{2}_lr{3}_ep{4}/rnn_state_{0}_N{1}_nh{2}_lr{3}_ep{4}.pt".format(
-        model_name, num_spins, num_hidden, lr, num_epochs
+    "{0}/rnn_state_{1}_N{2}_nh{3}_lr{4}_ep{5}.pt".format(
+        study_path, model_name, num_spins, num_hidden, lr, num_epochs
     ),
 )
 
 
-# ---- Everything from here on is plotting ----
+# ---- All of the following plots are done here to avoid saving huge data ----
 
+
+epochs = np.arange(num_epochs // period)  # for use in plotting
 num_epochs_shown = 5  # in plots where multiple epochs plotted, how many to plot
 
 
-# Make two subplots of fidelity and KL div. vs epoch
-
-epochs = np.arange(1, num_epochs + 1, period)
-
-fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(14, 3))
-
-ax = axs[0]
-ax.plot(
-    np.arange(0, num_epochs + 1, period),
-    fidelity_array,
-    "o",
-    color="C0",
-    markeredgecolor="black",
-)
-ax.set_title(
-    r"Reconstruction Fidelity for {0}, N = {1}".format(data_name.upper(), num_spins)
-)
-ax.set_xlabel(r"Epoch")
-ax.set_ylabel(r"Fidelity")
-ax.set_ylim(top=1.0)
-
-ax = axs[1]
-ax.plot(
-    np.arange(0, num_epochs + 1, period),
-    div_array,
-    "o",
-    color="C1",
-    markeredgecolor="black",
-)
-ax.set_title(
-    r"Reconstruction KL divergence for {0}, N = {1}".format(
-        data_name.upper(), num_spins
-    )
-)
-ax.set_ylabel(r"KL Divergence")
-ax.set_xlabel(r"Epoch")
-
-plt.tight_layout()
-
-plt.savefig(
-    "../results/{0}_results/N{1}_nh{2}_lr{3}_ep{4}/fid_KL_rnn_{0}_N{1}_nh{2}_lr{3}_ep{4}.png".format(
-        model_name, num_spins, num_hidden, lr, num_epochs
-    )
-)
-
-
-# Plots of abs. difference in model and target energy vs epoch
-
-fig, ax = plt.subplots()
-ax.plot(
-    np.arange(0, num_epochs + 1, period),
-    energy_array,
-    "o",
-    color="C0",
-    markeredgecolor="black",
-)
-ax.set_title(
-    r"Abs. difference in model and target energy for {0}, N = {1}".format(
-        data_name.upper(), num_spins
-    )
-)
-ax.set_ylabel(r"$|E_{RNN} - E_{targ}$")
-ax.set_xlabel(r"Epoch")
-
-plt.tight_layout()
-
-plt.savefig(
-    "../results/{0}_results/N{1}_nh{2}_lr{3}_ep{4}/energy_{0}_N{1}_nh{2}_lr{3}_ep{4}.png".format(
-        model_name, num_spins, num_hidden, lr, num_epochs
-    )
-)
-
-
-# Reconstructed and target measurement probabilities difference
-
-fig, ax = plt.subplots()
-for epoch in range(0, num_epochs + 1, num_epochs // num_epochs_shown):
-    ax.plot(
-        np.arange(input_dim ** num_spins),
-        diffs_array[epoch // period, :],
-        "o",
-        markersize=2.5,
-        label="Epoch: {0}".format(epoch),
-    )
-ax.legend()
-ax.set_title(
-    r"Reconstruction measurement probabilities comparison for {0}".format(
-        data_name.upper()
-    )
-)
-ax.set_xlabel(r"Basis state b")
-ax.set_ylabel(r"$P_{model}(b) - P_{true}(b)$")
-
-plt.savefig(
-    "../results/{0}_results/N{1}_nh{2}_lr{3}_ep{4}/prob_diffs_{0}_N{1}_nh{2}_lr{3}_ep{4}.png".format(
-        model_name, num_spins, num_hidden, lr, num_epochs
-    )
-)
-
 # Coefficients of reconstructed state
 
-fig, ax = plt.subplots()
-for epoch in range(0, num_epochs + 1, num_epochs // num_epochs_shown):
-    ax.plot(
-        np.arange(input_dim ** num_spins),
-        coeffs_array[epoch // period, :],
-        "o",
-        markersize=2.5,
-        label="Epoch: {0}".format(epoch),
+if plot_coeffs:
+    fig, ax = plt.subplots()
+    for epoch in range(0, num_epochs + 1, num_epochs // num_epochs_shown):
+        ax.plot(
+            np.arange(input_dim ** num_spins),
+            coeffs_array[epoch // period, :],
+            "o",
+            markersize=2.5,
+            label="Epoch: {0}".format(epoch),
+        )
+    ax.legend()
+    ax.set_title(
+        r"Reconstruction basis state coefficieints for {0}".format(data_name.upper())
     )
-ax.legend()
-ax.set_title(
-    r"Reconstruction basis state coefficieints for {0}".format(data_name.upper())
-)
-ax.set_xlabel(r"Basis state b")
-ax.set_ylabel(r"$b_{model}$")
-
-plt.savefig(
-    "../results/{0}_results/N{1}_nh{2}_lr{3}_ep{4}/coeffs_{0}_N{1}_nh{2}_lr{3}_ep{4}.png".format(
-        model_name, num_spins, num_hidden, lr, num_epochs
+    ax.set_xlabel(r"Basis state b")
+    ax.set_ylabel(r"$b_{model}$")
+    
+    plt.savefig(
+        "{0}/coeffs_{1}_N{2}_nh{3}_lr{4}_ep{5}.png".format(
+            study_path, model_name, num_spins, num_hidden, lr, num_epochs
+        )
     )
-)
 
 
-# Plot of average loss function value per epoch
+# ---- These plots look at different types of model parameters
 
-fig, ax = plt.subplots()
-ax.plot(epochs, loss_array, "o")
-ax.set_title(r"Loss function for training {0}".format(data_name.upper()))
-ax.set_xlabel(r"Epoch")
-ax.set_ylabel(r"Loss")
-
-plt.savefig(
-    "../results/{0}_results/N{1}_nh{2}_lr{3}_ep{4}/loss_{0}_N{1}_nh{2}_lr{3}_ep{4}.png".format(
-        model_name, num_spins, num_hidden, lr, num_epochs
-    )
-)
-
-
+# Define parameter names for use in parameter-dependent plots
 param_names = [
     "input-hidden_weights",
     "hidden-hidden_weights",
@@ -381,103 +279,108 @@ param_names = [
     "output_bias",
 ]
 
+
 # Make plots of average gradients for each parameter
 
-fig, ax = plt.subplots()
-for par_num in range(num_pars):
-    ax.plot(
-        epochs, avg_grads_array[:, par_num], label="{0}".format(param_names[par_num])
+if plot_avg_grad_per_param:
+    fig, ax = plt.subplots()
+    for par_num in range(num_pars):
+        ax.plot(
+            epochs, avg_grads_array[:, par_num], label="{0}".format(param_names[par_num])
+        )
+    ax.legend()
+    ax.set_title(r"Average absolute gradients per parameter every epoch")
+    ax.set_xlabel(r"Epoch")
+    ax.set_ylabel(r"Average absolute parameter gradient")
+    
+    plt.savefig(
+        "{0}/avg_grad_{1}_N{2}_nh{3}_lr{4}_ep{5}.png".format(
+            study_path, model_name, num_spins, num_hidden, lr, num_epochs
+        )
     )
-ax.legend()
-ax.set_title(r"Average absolute gradients per parameter every epoch")
-ax.set_xlabel(r"Epoch")
-ax.set_ylabel(r"Average absolute parameter gradient")
-
-plt.savefig(
-    "../results/{0}_results/N{1}_nh{2}_lr{3}_ep{4}/avg_grad_{0}_N{1}_nh{2}_lr{3}_ep{4}.png".format(
-        model_name, num_spins, num_hidden, lr, num_epochs
-    )
-)
 
 
 # Make plots of max gradients for each parameter
 
-fig, ax = plt.subplots()
-for par_num in range(num_pars):
-    ax.plot(
-        epochs, max_grads_array[:, par_num], label="{0}".format(param_names[par_num]),
+if plot_max_grad_per_param:
+    fig, ax = plt.subplots()
+    for par_num in range(num_pars):
+        ax.plot(
+            epochs, max_grads_array[:, par_num], label="{0}".format(param_names[par_num]),
+        )
+    ax.legend()
+    ax.set_title(r"Max absolute gradients per parameter every epoch")
+    ax.set_xlabel(r"Epoch")
+    ax.set_ylabel(r"Max absolute parameter gradient")
+
+    plt.savefig(
+        "{0}/max_grad_{1}_N{2}_nh{3}_lr{4}_ep{5}.png".format(
+            study_path, model_name, num_spins, num_hidden, lr, num_epochs
+        )
     )
-ax.legend()
-ax.set_title(r"Max absolute gradients per parameter every epoch")
-ax.set_xlabel(r"Epoch")
-ax.set_ylabel(r"Max absolute parameter gradient")
-
-plt.savefig(
-    "../results/{0}_results/N{1}_nh{2}_lr{3}_ep{4}/max_grad_{0}_N{1}_nh{2}_lr{3}_ep{4}.png".format(
-        model_name, num_spins, num_hidden, lr, num_epochs
-    )
-)
 
 
-# Make scatterplot of mean gradient vs magnetization for each parameter at different epochs
+# Scatterplot: mean gradient vs magnetization for each parameter, varying epoch
 
-# Want to sort the grads by magnetization
+# First sort the gradients by magnetization
+if plot_avg_grad_vs_mag:
+    unique_mags = torch.unique(mags_array, dim=1)
+    unique_mags_grads = torch.zeros((num_epochs, unique_mags.size(1), num_pars))
+    zeros = torch.zeros(unique_mags_grads.size())
 
-# unique_mags = torch.unique(mags_array, dim=1)
-# unique_mags_grads = torch.zeros((num_epochs, unique_mags.size(1), num_pars))
-# zeros = torch.zeros(unique_mags_grads.size())
-#
-# for epoch in range(num_epochs):
-#     for par_num in range(num_pars):
-#         for mag_num in range(unique_mags.size(1)):
-#             temp_tens = torch.where(
-#                 mags_array[epoch, :] == unique_mags[epoch, mag_num],
-#                 mag_grads_array[epoch, :, par_num],
-#                 zeros[epoch, :, par_num],
-#             )
-#             unique_mags_grads[epoch, mag_num, par_num] = torch.sum(
-#                 temp_tens
-#             ) / torch.nonzero(temp_tens).size(0)
-#
-#
-# for par_num in range(num_pars):  # loop over parameters
-#     fig, ax = plt.subplots()
-#     for epoch in range(0, num_epochs + 1, period):  # loop over epochs
-#         epoch = 1 if epoch == 0 else epoch
-#         ax.plot(
-#             unique_mags[epoch - 1, :],
-#             unique_mags_grads[epoch - 1, :, par_num],
-#             "o",
-#             markersize=3,
-#             label="Epoch: {0}".format(epoch),
-#         )
-#     ax.legend()
-#     ax.set_title(
-#         r"Avg. abs. grads for {0} vs magnetization".format(param_names[par_num])
-#     )
-#     ax.set_xlabel(r"Magnetization")
-#     ax.set_ylabel(r"Average absolute parameter gradient")
-#
-#     ax.set_ylim(bottom=0)
-#     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-#
-#     plt.tight_layout()
-#
-#     plt.savefig(
-#         "../results/{0}_results/N{1}_nh{2}_lr{3}_ep{4}/mag_grad_param_{5}_{0}_N{1}_nh{2}_lr{3}_ep{4}.png".format(
-#             model_name, num_spins, num_hidden, lr, num_epochs, param_names[par_num], param_names[par_num],
-#         )
-#     )
+# Average over all samples of a particular magnetization
+if plot_avg_grad_vs_mag:
+    for epoch in range(num_epochs):
+        for par_num in range(num_pars):
+            for mag_num in range(unique_mags.size(1)):
+                temp_tens = torch.where(
+                    mags_array[epoch, :] == unique_mags[epoch, mag_num],
+                    mag_grads_array[epoch, :, par_num],
+                    zeros[epoch, :, par_num],
+                )
+                unique_mags_grads[epoch, mag_num, par_num] = torch.sum(
+                    temp_tens
+                ) / torch.nonzero(temp_tens).size(0)
+
+if plot_avg_grad_vs_mag:
+    for par_num in range(num_pars):  # loop over parameters
+        fig, ax = plt.subplots()
+        for epoch in range(0, num_epochs + 1, period):  # loop over epochs
+            epoch = 1 if epoch == 0 else epoch
+            ax.plot(
+                unique_mags[epoch - 1, :],
+                unique_mags_grads[epoch - 1, :, par_num],
+                "o",
+                markersize=3,
+                label="Epoch: {0}".format(epoch),
+            )
+        ax.legend()
+        ax.set_title(
+            r"Avg. abs. grads for {0} vs magnetization".format(param_names[par_num])
+        )
+        ax.set_xlabel(r"Magnetization")
+        ax.set_ylabel(r"Average absolute parameter gradient")
+
+        ax.set_ylim(bottom=0)
+        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+
+        plt.tight_layout()
+
+        plt.savefig(
+            study_path + "/mag_grad_param_{0}_{1}_N{2}_nh{3}_lr{4}_ep{5}.png".format(
+                model_name, num_spins, num_hidden, lr, num_epochs, param_names[par_num], param_names[par_num],
+            )
+        )
 
 
-# Make probability tree
-
-for epoch in range(0, num_epochs + 1, num_epochs // num_epochs_shown):
-    wavefunc = coeffs_array[epoch // period, :].numpy()
-    build_tree(
-        num_spins,
-        wavefunc,
-        "../results/{0}_results/N{1}_nh{2}_lr{3}_ep{4}/tree_probs_{0}_ep{5}_N{1}_nh{2}_lr{3}".format(
-            model_name, num_spins, num_hidden, lr, num_epochs, epoch
-        ),
-    )
+# Makes a binary tree showing the probabilities during autoregressive sampling
+if plot_sample_tree:
+    for epoch in range(0, num_epochs + 1, num_epochs // num_epochs_shown):
+        wavefunc = coeffs_array[epoch // period, :].numpy()
+        build_tree(
+            num_spins,
+            wavefunc,
+            "{0}/tree_probs_{1}_epoch{2}_N{3}_nh{4}_lr{5}_ep{6}".format(
+                study_path, model_name, epoch, num_spins, num_hidden, lr, num_epochs
+            ),
+        )

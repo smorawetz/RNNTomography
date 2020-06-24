@@ -55,7 +55,10 @@ def energy(wavefunction, true_energy, model_name, num_samples=100, J=1, B=1):
     kwargs = kwarg_dict[model_name]
     E = energy_function(wavefunction, samples_hot, samples, num_samples, **kwargs)
 
-    return abs(E - true_energy).item()
+    print("average RNN energy is: ", E.item())
+    print("true energy is: ", true_energy)
+
+    return abs(E - true_energy).item() / wavefunction.num_spins
 
 
 # Average energy of RNN samples for TFIM
@@ -85,7 +88,7 @@ def tfim_energy(wavefunction, samples_hot, samples, num_samples, J=1, B=1):
     samples = 1 - 2 * samples  # map 0, 1 spins to 1, -1
     # Loop over all neighbour pairs of spins (diagonal observable)
     for spin_num in range(wavefunction.num_spins - 1):
-        E -= 0.25 * J * torch.mean(samples[spin_num, :] * samples[spin_num + 1, :])
+        E -= J * torch.mean(samples[spin_num, :] * samples[spin_num + 1, :])
 
     # Loop over all spins to calculate ratio of coeffs with that spin flipped
     for spin_num in range(wavefunction.num_spins):
@@ -100,7 +103,7 @@ def tfim_energy(wavefunction, samples_hot, samples, num_samples, J=1, B=1):
         unflipped_probs = torch.prod(unflipped_probs, dim=0).detach()
 
         coeff_ratios = np.sqrt(flipped_probs / unflipped_probs)
-        E -= 0.5 * torch.mean(B * coeff_ratios)  # 0.5 from spin-1/2
+        E -= torch.mean(B * coeff_ratios)
 
     return E
 
@@ -145,7 +148,7 @@ def xy_energy(wavefunction, samples_hot, samples, num_samples, J=1):
         factor = 1 + (-1) ** (1 + samples[spin_num] + samples[spin_num + 1])
 
         coeff_ratios = np.sqrt(flipped_probs / unflipped_probs)
-        E -= 0.25 * torch.mean(J * factor * coeff_ratios)  # 0.25 from spin-1/2
+        E -= torch.mean(J * factor * coeff_ratios)
 
     return E
 
@@ -372,10 +375,10 @@ class PositiveWaveFunction(nn.Module):
 
     def initialize_parameters(self, stdev):
         """Initializies NN parameters according to a specified distribution"""
-        param_init_dist(self.cell.weight_ih, std=1 / self.num_hidden)
-        param_init_dist(self.cell.weight_hh, std=1 / self.num_hidden)
-        param_init_dist(self.cell.bias_ih, std=1 / self.num_hidden)
-        param_init_dist(self.cell.bias_hh, std=1 / self.num_hidden)
+        param_init_dist(self.cell.weight_ih, std=stdev)
+        param_init_dist(self.cell.weight_hh, std=stdev)
+        param_init_dist(self.cell.bias_ih, std=stdev)
+        param_init_dist(self.cell.bias_hh, std=stdev)
 
     def init_hidden(self, mod_batch_size=None):
         """Initializes hidden units num_layers x batch_size x num_hidden"""
@@ -404,8 +407,10 @@ class PositiveWaveFunction(nn.Module):
 
             # Linear transformation, then softmax to output
             probs = F.softmax(self.lin_trans(self.hidden), dim=1)
+
             sample_dist = torch.distributions.Categorical(probs)
             gen_samples = sample_dist.sample()
+
             # Add samples to tensor and feed them as next inputs
             inputs = one_hot(gen_samples)
             samples[spin_num, :, :] = inputs
@@ -424,6 +429,7 @@ class PositiveWaveFunction(nn.Module):
         """
         # Hack to enable fidelities and samples to be computed with forward pass
         batch_size = mod_batch_size if mod_batch_size else self.batch_size
+
         # Initialize hidden units
         self.hidden = self.init_hidden(mod_batch_size=mod_batch_size)
 

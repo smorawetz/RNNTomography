@@ -55,7 +55,7 @@ def energy(wavefunction, true_energy, model_name, num_samples=100, J=1, B=1):
     kwargs = kwarg_dict[model_name]
     E = energy_function(wavefunction, samples_hot, samples, num_samples, **kwargs)
 
-    return abs(E - true_energy).item()
+    return abs(E - true_energy).item() / wavefunction.num_spins
 
 
 # Average energy of RNN samples for TFIM
@@ -85,7 +85,7 @@ def tfim_energy(wavefunction, samples_hot, samples, num_samples, J=1, B=1):
     samples = 1 - 2 * samples  # map 0, 1 spins to 1, -1
     # Loop over all neighbour pairs of spins (diagonal observable)
     for spin_num in range(wavefunction.num_spins - 1):
-        E -= 0.25 * J * torch.mean(samples[spin_num, :] * samples[spin_num + 1, :])
+        E -= J * torch.mean(samples[spin_num, :] * samples[spin_num + 1, :])
 
     # Loop over all spins to calculate ratio of coeffs with that spin flipped
     for spin_num in range(wavefunction.num_spins):
@@ -100,7 +100,7 @@ def tfim_energy(wavefunction, samples_hot, samples, num_samples, J=1, B=1):
         unflipped_probs = torch.prod(unflipped_probs, dim=0).detach()
 
         coeff_ratios = np.sqrt(flipped_probs / unflipped_probs)
-        E -= 0.5 * torch.mean(B * coeff_ratios)
+        E -= torch.mean(B * coeff_ratios)
 
     return E
 
@@ -145,7 +145,7 @@ def xy_energy(wavefunction, samples_hot, samples, num_samples, J=1):
         factor = 1 + (-1) ** (1 + samples[spin_num] + samples[spin_num + 1])
 
         coeff_ratios = np.sqrt(flipped_probs / unflipped_probs)
-        E -= 0.25 * torch.mean(J * factor * coeff_ratios)
+        E -= torch.mean(J * factor * coeff_ratios)
 
     return E
 
@@ -430,7 +430,7 @@ class PositiveWaveFunction(nn.Module):
             outputs = F.softmax(self.lin_trans(self.hidden), dim=1)
 
             # Kill probabilities if quote of up/down spins reached
-            up_part = up_certain * outputs 
+            up_part = up_certain * outputs
             up_part *= np.heaviside(self.thresh_up - cum_up_spins, 0).unsqueeze(1)
             dn_part = dn_certain * outputs
             dn_part *= np.heaviside(self.thresh_dn - cum_dn_spins, 0).unsqueeze(1)
@@ -446,7 +446,7 @@ class PositiveWaveFunction(nn.Module):
             samples[spin_num, :, :] = inputs
 
             # Add generated samples to cumulative up and down spins
-            cum_up_spins += 1 - gen_samples 
+            cum_up_spins += 1 - gen_samples
             cum_dn_spins += gen_samples
 
         return samples
