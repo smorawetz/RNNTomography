@@ -55,9 +55,6 @@ def energy(wavefunction, true_energy, model_name, num_samples=100, J=1, B=1):
     kwargs = kwarg_dict[model_name]
     E = energy_function(wavefunction, samples_hot, samples, num_samples, **kwargs)
 
-    print("average RNN energy is: ", E.item())
-    print("true energy is: ", true_energy)
-
     return abs(E - true_energy).item() / wavefunction.num_spins
 
 
@@ -334,7 +331,6 @@ class PositiveWaveFunction(nn.Module):
         batch_size=10,
         unit_cell=nn.RNNCell,
         manual_param_init=False,
-        large_init_stdev=False,
     ):
         """
             num_spins:          int
@@ -354,13 +350,12 @@ class PositiveWaveFunction(nn.Module):
 
             manual_param_init:  bool
                                 whether to initialize params with custom dist.
-            large_init_stdev:   bool
-                                whether to initialize params with big std. dev.
         """
         super(PositiveWaveFunction, self).__init__()
 
         num_hidden = num_hidden if num_hidden else num_spins
 
+        # Initialize attributes
         self.num_spins = num_spins
         self.input_dim = input_dim
         self.num_hidden = num_hidden
@@ -368,13 +363,15 @@ class PositiveWaveFunction(nn.Module):
         self.batch_size = batch_size
         self.cell = unit_cell(input_dim, num_hidden, bias=inc_bias)
 
+        # Initialize FC layer
         self.lin_trans = nn.Linear(num_hidden, input_dim)
 
-        stdev = 1 if large_init_stdev else 1 / np.sqrt(self.num_hidden)
-        self.initialize_parameters(stdev) if manual_param_init else None
+        # Parameter intialization
+        self.initialize_parameters() if manual_param_init else None
 
-    def initialize_parameters(self, stdev):
+    def initialize_parameters(self):
         """Initializies NN parameters according to a specified distribution"""
+        stdev = 1 / np.sqrt(self.num_hidden)
         param_init_dist(self.cell.weight_ih, std=stdev)
         param_init_dist(self.cell.weight_hh, std=stdev)
         param_init_dist(self.cell.bias_ih, std=stdev)

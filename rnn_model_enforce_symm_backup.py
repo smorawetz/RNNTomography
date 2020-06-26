@@ -335,7 +335,6 @@ class PositiveWaveFunction(nn.Module):
         batch_size=10,
         unit_cell=nn.RNNCell,
         manual_param_init=False,
-        large_init_stdev=False,
     ):
         """
             num_spins:          int
@@ -357,8 +356,6 @@ class PositiveWaveFunction(nn.Module):
 
             manual_param_init:  bool
                                 whether to change default param initialization
-            large_init_stdev:   bool
-                                whether to initialize params with big std. dev.
         """
         super(PositiveWaveFunction, self).__init__()
 
@@ -382,16 +379,16 @@ class PositiveWaveFunction(nn.Module):
         # Initialize FC layer
         self.lin_trans = nn.Linear(num_hidden, input_dim)
 
-        # Define properties of parameter intialization
-        stdev = 1 if large_init_stdev else 1 / np.sqrt(self.num_hidden)
+        # Parameter intialization
         self.initialize_parameters() if manual_param_init else None
 
     def initialize_parameters(self):
         """Initializes the NN parameters to specified distribution"""
-        param_init_dist(self.cell.weight_ih, std=1 / self.num_hidden)
-        param_init_dist(self.cell.weight_hh, std=1 / self.num_hidden)
-        param_init_dist(self.cell.bias_ih, std=1 / self.num_hidden)
-        param_init_dist(self.cell.bias_hh, std=1 / self.num_hidden)
+        stdev = 1 / np.sqrt(self.num_hidden)
+        param_init_dist(self.cell.weight_ih, std=stdev)
+        param_init_dist(self.cell.weight_hh, std=stdev)
+        param_init_dist(self.cell.bias_ih, std=stdev)
+        param_init_dist(self.cell.bias_hh, std=stdev)
 
     def init_hidden(self, mod_batch_size=None):
         """Initializes hidden units num_layers x batch_size x num_hidden"""
