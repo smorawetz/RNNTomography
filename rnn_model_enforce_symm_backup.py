@@ -55,7 +55,7 @@ def energy(wavefunction, true_energy, model_name, num_samples=100, J=1, B=1):
     kwargs = kwarg_dict[model_name]
     E = energy_function(wavefunction, samples_hot, samples, num_samples, **kwargs)
 
-    return abs(E - true_energy).item() / wavefunction.num_spins
+    return abs(E / wavefunction.num_spins - true_energy).item()
 
 
 # Average energy of RNN samples for TFIM
@@ -172,7 +172,6 @@ def prep_hilb_space(num_spins, input_dim):
         # Convert int to spin bitstring
         bit_list = list(format(i, "b").zfill(num_spins))
         binary_state = torch.Tensor(np.array(bit_list).astype(int))
-
         hilb_space[:, i, :] = one_hot(binary_state.long())
 
     return hilb_space
@@ -201,7 +200,7 @@ def probability(wavefunction, hilb_space):
 
     # Taking dot product between one-hot encoding, then mulitply over spins
     nn_probs = torch.sum(nn_outputs * hilb_space, dim=2)
-    nn_probs = torch.prod(nn_probs, 0)
+    nn_probs = torch.prod(nn_probs, dim=0)
 
     return nn_probs
 
@@ -226,7 +225,7 @@ def fidelity(target_state, nn_probs):
     return fid.item()
 
 
-# Return abs. difference between target and RNN coefficients for entire basis
+# Return difference between target and RNN probabilities for entire basis
 
 
 def prob_diff(target_state, nn_probs):
@@ -239,7 +238,7 @@ def prob_diff(target_state, nn_probs):
                         probabilities of each basis state, predicted by NN
 
         returns:        torch.Tensor
-                        each entry is difference between target and RNN probs 
+                        each entry is difference between target and RNN probs
     """
     targ_probs = torch.pow(torch.abs(target_state), 2)
     probability_diff = nn_probs - targ_probs
@@ -271,12 +270,12 @@ def KL_div(target_state, nn_probs):
     return div.item()
 
 
-# ---- End functions for evaluating training --
+# ---- End functions for evaluating training ----
 
 # ---- The following functions are for other tasks ----
 
 
-# Perform one-hot encoding of 0 and 1 in pytorch tensors
+# Perform one-hot encoding of 0 and 1 with pytorch tensors
 
 
 def one_hot(inputs, input_dim=2):
@@ -287,7 +286,7 @@ def one_hot(inputs, input_dim=2):
                     input dimension of system (2 for spin-1/2)
 
         returns:    torch.Tensor
-                    a one-hot encoding of inputs
+                    a one-hot encoding of input integer x or tensor of integers
     """
     if type(inputs) == int:
         encoded = torch.zeros(input_dim)
@@ -314,10 +313,10 @@ def log_prob(nn_outputs, data):
     """
     # Index the relevant probabilties
     probs = nn_outputs.gather(2, data.unsqueeze(2).long()).squeeze(2)
-    # Multiply across input dimension
+    # Multiply (sum logs) across spins, average over batch
     log_probs = torch.sum(torch.log(probs), dim=0)
-    log_prob = -torch.mean(log_probs)
-    return log_prob
+    avg_log_prob = -torch.mean(log_probs)
+    return avg_log_prob
 
 
 # Create a class for the model

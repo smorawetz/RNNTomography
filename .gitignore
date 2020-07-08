@@ -1,4 +1,5 @@
 # Ignore contents of results, training and legacy folders
+__pycache__
 results/*
 !results/.gitkeep
 training/*

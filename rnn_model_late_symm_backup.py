@@ -24,7 +24,7 @@ param_init_dist = torch.nn.init.normal_
 # Compute average energy of RNN samples
 
 
-def energy(wavefunction, true_energy, model_name, num_samples=100, J=1, B=1):
+def energy(wavefunction, true_energy, model_name, num_samples, epoch, symm_ep=1000, J=1, B=1):
     """
         wavefunction:   PositiveWaveFunction
                         trained RNN parametrization of state
@@ -34,6 +34,10 @@ def energy(wavefunction, true_energy, model_name, num_samples=100, J=1, B=1):
                         name of model, can be "tfim" or "xy"
         num_samples:    int
                         the number of samples over which to average energy
+        epoch:          int
+                        the current epoch in training
+        symm_ep:        int
+                        the epoch beyond which to impose symmetry
         J:              float
                         coupling coefficient from Hamiltonian
         B:              float
@@ -61,7 +65,7 @@ def energy(wavefunction, true_energy, model_name, num_samples=100, J=1, B=1):
 # Average energy of RNN samples for TFIM
 
 
-def tfim_energy(wavefunction, samples_hot, samples, num_samples, J=1, B=1):
+def tfim_energy(wavefunction, samples_hot, samples, num_samples, epoch, symm_ep=1000, J=1, B=1):
     """
         wavefunction:   PositiveWaveFunction
                         trained RNN parametrization of state
@@ -72,6 +76,10 @@ def tfim_energy(wavefunction, samples_hot, samples, num_samples, J=1, B=1):
                         autoregressive samples, num_spins x num_samples
         num_samples:    int
                         the number of samples over which to average energy
+        epoch:          int
+                        the current epoch in training
+        symm_ep:        int
+                        the epoch beyond which to impose symmetry
         J:              float
                         coupling coefficient from Hamiltonian
         B:              float
@@ -80,6 +88,7 @@ def tfim_energy(wavefunction, samples_hot, samples, num_samples, J=1, B=1):
         returns:        float
                         the average energy of TFIM ground state parametrization
     """
+    passed_ep = epoch >= symm_ep
     E = 0
 
     samples = 1 - 2 * samples  # map 0, 1 spins to 1, -1
@@ -91,8 +100,8 @@ def tfim_energy(wavefunction, samples_hot, samples, num_samples, J=1, B=1):
     for spin_num in range(wavefunction.num_spins):
         inputs = samples_hot.clone()
         inputs[spin_num, :, :] = 1 - inputs[spin_num, :, :]  # flip spin
-        flipped_outs = wavefunction(inputs, mod_batch_size=num_samples)
-        unflipped_outs = wavefunction(samples_hot, mod_batch_size=num_samples)
+        flipped_outs = wavefunction(inputs, passed_ep=passed_ep, mod_batch_size=num_samples)
+        unflipped_outs = wavefunction(samples_hot, passed_ep=passed_ep, mod_batch_size=num_samples)
 
         flipped_probs = torch.sum(flipped_outs * inputs, dim=2)
         flipped_probs = torch.prod(flipped_probs, dim=0).detach()
@@ -108,7 +117,7 @@ def tfim_energy(wavefunction, samples_hot, samples, num_samples, J=1, B=1):
 # Average energy of RNN samples for XY
 
 
-def xy_energy(wavefunction, samples_hot, samples, num_samples, J=1):
+def xy_energy(wavefunction, samples_hot, samples, num_samples, epoch, symm_ep=1000, J=1):
     """
         wavefunction:   PositiveWaveFunction
                         trained RNN parametrization of state
@@ -119,12 +128,17 @@ def xy_energy(wavefunction, samples_hot, samples, num_samples, J=1):
                         autoregressive samples, num_spins x num_samples
         num_samples:    int
                         the number of samples over which to average energy
+        epoch:          int
+                        the current epoch in training
+        symm_ep:        int
+                        the epoch beyond which to impose symmetry
         J:              float
                         coupling coefficient from Hamiltonian
 
         returns:        float
                         the average energy of TFIM ground state parametrization
     """
+    passed_ep = epoch >= symm_ep
     E = 0
 
     # Loop over all spins to calculate ratio of coeffs with that spin flipped
@@ -132,8 +146,8 @@ def xy_energy(wavefunction, samples_hot, samples, num_samples, J=1):
         inputs = samples_hot.clone()
         inputs[spin_num, :, :] = 1 - inputs[spin_num, :, :]  # flip spin
         inputs[spin_num + 1, :, :] = 1 - inputs[spin_num + 1, :, :]
-        flipped_outs = wavefunction(inputs, mod_batch_size=num_samples)
-        unflipped_outs = wavefunction(samples_hot, mod_batch_size=num_samples)
+        flipped_outs = wavefunction(inputs, passed_ep=passed_ep, mod_batch_size=num_samples)
+        unflipped_outs = wavefunction(samples_hot, passed_ep=passed_ep, mod_batch_size=num_samples)
 
         flipped_probs = torch.sum(flipped_outs * inputs, dim=2)
         flipped_probs = torch.prod(flipped_probs, dim=0).detach()
@@ -326,6 +340,7 @@ class PositiveWaveFunction(nn.Module):
     def __init__(
         self,
         num_spins,
+        fixed_mag=0,
         input_dim=2,
         num_hidden=None,
         num_layers=1,
@@ -337,6 +352,8 @@ class PositiveWaveFunction(nn.Module):
         """
             num_spins:          int
                                 the number of spins/qubits in the system
+            fixed_mag           int
+                                fixed magnetization of system (from symmetry)
             input_dim:          int
                                 the number of values the spins can take on
             num_hidden:         int
@@ -351,7 +368,7 @@ class PositiveWaveFunction(nn.Module):
                                 building block cell, e.g. RNN or LSTM
 
             manual_param_init:  bool
-                                whether to initialize params with custom dist.
+                                whether to change default param initialization
         """
         super(PositiveWaveFunction, self).__init__()
 
@@ -359,11 +376,18 @@ class PositiveWaveFunction(nn.Module):
 
         # Initialize attributes
         self.num_spins = num_spins
+        self.fixed_mag = fixed_mag
         self.input_dim = input_dim
         self.num_hidden = num_hidden
         self.num_layers = num_layers
         self.batch_size = batch_size
         self.cell = unit_cell(input_dim, num_hidden, bias=inc_bias)
+
+        # Keep track of the cumulative spins to enforce magnetization
+        half_spins = num_spins // 2
+        plus1_if_odd = num_spins % 2  # +1 to up spin threshold if odd total
+        self.thresh_up = half_spins + plus1_if_odd + self.fixed_mag // 2
+        self.thresh_dn = half_spins - self.fixed_mag // 2
 
         # Initialize FC layer
         self.lin_trans = nn.Linear(num_hidden, input_dim)
@@ -372,7 +396,7 @@ class PositiveWaveFunction(nn.Module):
         self.initialize_parameters() if manual_param_init else None
 
     def initialize_parameters(self):
-        """Initializies NN parameters according to a specified distribution"""
+        """Initializes the NN parameters to specified distribution"""
         stdev = 1 / np.sqrt(self.num_hidden)
         param_init_dist(self.cell.weight_ih, std=stdev)
         param_init_dist(self.cell.weight_hh, std=stdev)
@@ -399,13 +423,30 @@ class PositiveWaveFunction(nn.Module):
         inputs = init_state.repeat(num_samples, 1)
         self.hidden = self.init_hidden(mod_batch_size=num_samples)
 
+        # Define tensors to keep track of up and down spins
+        cum_up_spins = torch.zeros(num_samples)
+        cum_dn_spins = torch.zeros(num_samples)
+
+        # These represent NN outputs which guarantee up and down spins resp.
+        up_certain = one_hot(0).unsqueeze(0).repeat(num_samples, 1)
+        dn_certain = one_hot(1).unsqueeze(0).repeat(num_samples, 1)
+
         for spin_num in range(self.num_spins):
             for _ in range(self.num_layers):
                 # Output is num_samples x num_hidden
                 self.hidden = self.cell(inputs, self.hidden)
 
             # Linear transformation, then softmax to output
-            probs = F.softmax(self.lin_trans(self.hidden), dim=1)
+            outputs = F.softmax(self.lin_trans(self.hidden), dim=1)
+
+            # Kill probabilities if quote of up/down spins reached
+            up_part = up_certain * outputs
+            up_part *= np.heaviside(self.thresh_up - cum_up_spins, 0).unsqueeze(1)
+            dn_part = dn_certain * outputs
+            dn_part *= np.heaviside(self.thresh_dn - cum_dn_spins, 0).unsqueeze(1)
+            probs = up_part + dn_part
+
+            probs /= torch.sum(probs, dim=1).unsqueeze(1)  # renormalize
 
             sample_dist = torch.distributions.Categorical(probs)
             gen_samples = sample_dist.sample()
@@ -414,23 +455,37 @@ class PositiveWaveFunction(nn.Module):
             inputs = one_hot(gen_samples)
             samples[spin_num, :, :] = inputs
 
+            # Add generated samples to cumulative up and down spins
+            cum_up_spins += 1 - gen_samples
+            cum_dn_spins += gen_samples
+
         return samples
 
-    def forward(self, data_in, mod_batch_size=None):
+    def forward(self, data_in, passed_ep=False, mod_batch_size=None):
         """
             data_in:        torch.tensor
-                            input data, shape num_spins x batch_size x input size
+                            data, shape num_spins x batch_size x input size
+            passed_ep:      bool
+                            whether or not passed epoch to impose symmetry
             mod_batch_size: int
                             used in fidelity calculation to have batch size 1
 
             Returns:        torch.Tensor
                             forward pass, num_spins x batch_size x input_dim
         """
-        # Hack to enable fidelities and samples to be computed with forward pass
+        # Hack to get fidelities and samples with forward pass
         batch_size = mod_batch_size if mod_batch_size else self.batch_size
 
         # Initialize hidden units
         self.hidden = self.init_hidden(mod_batch_size=mod_batch_size)
+
+        # Define tensors to keep track of up and down spins
+        cum_up_spins = torch.zeros(batch_size)
+        cum_dn_spins = torch.zeros(batch_size)
+
+        # These represent NN outputs which guarantee up and down spins resp.
+        up_certain = one_hot(0).unsqueeze(0).repeat(batch_size, 1)
+        dn_certain = one_hot(1).unsqueeze(0).repeat(batch_size, 1)
 
         # Replace first spin with fixed state, shift others "right" so that
         # networks makes predictions s_0 -> s_1, s_1 -> s_2, ... s_N-1 -> s_N
@@ -439,8 +494,9 @@ class PositiveWaveFunction(nn.Module):
         data[0, :, :] = init_state.repeat(batch_size, 1)
         data[1:, :, :] = temp_data
 
-        # Initialize tensor to hold NN outputs
-        state_probs = torch.zeros((self.num_spins, batch_size, self.input_dim))
+        # Initialize tensors to hold NN outputs
+        probs = torch.zeros((self.num_spins, batch_size, self.input_dim))
+        corr_probs = torch.zeros((self.num_spins, batch_size, self.input_dim))
 
         for spin_num in range(self.num_spins):
             for _ in range(self.num_layers):
@@ -448,6 +504,21 @@ class PositiveWaveFunction(nn.Module):
                 self.hidden = self.cell(data[spin_num, :, :], self.hidden)
 
             # Linear transformation, then softmax to output
-            state_probs[spin_num, :, :] = F.softmax(self.lin_trans(self.hidden), dim=1)
+            probs[spin_num, :, :] = F.softmax(self.lin_trans(self.hidden), dim=1)
 
-        return state_probs
+            if spin_num != 0 and passed_ep:
+                # Index current spin since data already shifted "right"
+                cum_up_spins += data[spin_num, :, 0]
+                cum_dn_spins += data[spin_num, :, 1]
+                up_part = up_certain * probs[spin_num, :, :]
+                up_part *= np.heaviside(self.thresh_up - cum_up_spins, 0).unsqueeze(1)
+                dn_part = dn_certain * probs[spin_num, :, :]
+                dn_part *= np.heaviside(self.thresh_dn - cum_dn_spins, 0).unsqueeze(1)
+                corr_probs[spin_num, :, :] = up_part + dn_part
+
+        corr_probs[0, :, :] = probs[0, :, :]  # first spin unchanged
+
+        # Renormalize after step function kills impossible spins
+        corr_probs /= torch.sum(corr_probs, dim=2).unsqueeze(2)
+
+        return corr_probs
