@@ -24,7 +24,7 @@ param_init_dist = torch.nn.init.normal_
 # Compute average energy of RNN samples
 
 
-def energy(wavefunction, true_energy, model_name, num_samples, epoch, symm_ep=1000, J=1, B=1):
+def energy(wavefunction, true_energy, model_name, num_samples, passed_ep, J=1, B=1):
     """
         wavefunction:   PositiveWaveFunction
                         trained RNN parametrization of state
@@ -34,10 +34,8 @@ def energy(wavefunction, true_energy, model_name, num_samples, epoch, symm_ep=10
                         name of model, can be "tfim" or "xy"
         num_samples:    int
                         the number of samples over which to average energy
-        epoch:          int
-                        the current epoch in training
-        symm_ep:        int
-                        the epoch beyond which to impose symmetry
+        passed_ep:      bool
+                        whether of not to start imposing symmetry
         J:              float
                         coupling coefficient from Hamiltonian
         B:              float
@@ -57,7 +55,7 @@ def energy(wavefunction, true_energy, model_name, num_samples, epoch, symm_ep=10
 
     energy_function = model_dict[model_name]
     kwargs = kwarg_dict[model_name]
-    E = energy_function(wavefunction, samples_hot, samples, num_samples, **kwargs)
+    E = energy_function(wavefunction, samples_hot, samples, num_samples, passed_ep, **kwargs)
 
     return abs(E / wavefunction.num_spins - true_energy).item()
 
@@ -65,7 +63,7 @@ def energy(wavefunction, true_energy, model_name, num_samples, epoch, symm_ep=10
 # Average energy of RNN samples for TFIM
 
 
-def tfim_energy(wavefunction, samples_hot, samples, num_samples, epoch, symm_ep=1000, J=1, B=1):
+def tfim_energy(wavefunction, samples_hot, samples, num_samples, passed_ep, J=1, B=1):
     """
         wavefunction:   PositiveWaveFunction
                         trained RNN parametrization of state
@@ -76,10 +74,8 @@ def tfim_energy(wavefunction, samples_hot, samples, num_samples, epoch, symm_ep=
                         autoregressive samples, num_spins x num_samples
         num_samples:    int
                         the number of samples over which to average energy
-        epoch:          int
-                        the current epoch in training
-        symm_ep:        int
-                        the epoch beyond which to impose symmetry
+        passed_ep:      bool
+                        whether of not to start imposing symmetry
         J:              float
                         coupling coefficient from Hamiltonian
         B:              float
@@ -88,7 +84,6 @@ def tfim_energy(wavefunction, samples_hot, samples, num_samples, epoch, symm_ep=
         returns:        float
                         the average energy of TFIM ground state parametrization
     """
-    passed_ep = epoch >= symm_ep
     E = 0
 
     samples = 1 - 2 * samples  # map 0, 1 spins to 1, -1
@@ -117,7 +112,7 @@ def tfim_energy(wavefunction, samples_hot, samples, num_samples, epoch, symm_ep=
 # Average energy of RNN samples for XY
 
 
-def xy_energy(wavefunction, samples_hot, samples, num_samples, epoch, symm_ep=1000, J=1):
+def xy_energy(wavefunction, samples_hot, samples, num_samples, passed_ep, J=1):
     """
         wavefunction:   PositiveWaveFunction
                         trained RNN parametrization of state
@@ -128,17 +123,14 @@ def xy_energy(wavefunction, samples_hot, samples, num_samples, epoch, symm_ep=10
                         autoregressive samples, num_spins x num_samples
         num_samples:    int
                         the number of samples over which to average energy
-        epoch:          int
-                        the current epoch in training
-        symm_ep:        int
-                        the epoch beyond which to impose symmetry
+        passed_ep:      bool
+                        whether of not to start imposing symmetry
         J:              float
                         coupling coefficient from Hamiltonian
 
         returns:        float
                         the average energy of TFIM ground state parametrization
     """
-    passed_ep = epoch >= symm_ep
     E = 0
 
     # Loop over all spins to calculate ratio of coeffs with that spin flipped
@@ -506,7 +498,7 @@ class PositiveWaveFunction(nn.Module):
             # Linear transformation, then softmax to output
             probs[spin_num, :, :] = F.softmax(self.lin_trans(self.hidden), dim=1)
 
-            if spin_num != 0 and passed_ep:
+            if spin_num != 0:
                 # Index current spin since data already shifted "right"
                 cum_up_spins += data[spin_num, :, 0]
                 cum_dn_spins += data[spin_num, :, 1]
@@ -521,4 +513,7 @@ class PositiveWaveFunction(nn.Module):
         # Renormalize after step function kills impossible spins
         corr_probs /= torch.sum(corr_probs, dim=2).unsqueeze(2)
 
-        return corr_probs
+        if passed_ep:
+            return corr_probs
+        else:
+            return probs

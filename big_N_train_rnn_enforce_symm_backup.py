@@ -8,21 +8,16 @@ import torch.optim as optim
 import rnn_model_enforce_symm as rnn_model  # local, has relevant functions
 
 # Define physical parameters
-# num_spins = 4  # number of spins/qubits -- NOTE: Outdated
 input_dim = 2  # values inputs can take, e.g. 2 for spin-1/2
 fixed_mag = 0  # value of total magnetization to enforce during training
 
 # Define NN parameters
-# num_hidden = 100  # size of the RNN hidden unit vector -- NOTE: Outdated
 num_layers = 3  # number of stacked unit cells
 inc_bias = True  # include bias in activation function
 unit_cell = nn.GRUCell  # basic cell of NN (e.g. RNN, LSTM, etc.)
 
 # Define training parameters
 batch_size = 50  # size of mini_batches of data
-# num_epochs = 250  # number of epochs of training to perform -- NOTE: Outdated
-# optimizer = optim.SGD  # what optimizer to use -- NOTE: Parameter
-# lr = 0.001  # learning rate -- NOTE: Outdated
 
 # Define training evaluation parameters
 num_samples = 100  # number of samples to average energy over
@@ -93,8 +88,8 @@ def run_training(data_name, num_spins, num_hidden, lr, num_epochs, optimizer):
     # Create Hilbert space, instantiate model and optimizer
     model = rnn_model.PositiveWaveFunction(
         num_spins,
-        input_dim=input_dim,
         fixed_mag=fixed_mag,
+        input_dim=input_dim,
         num_hidden=num_hidden,
         num_layers=num_layers,
         inc_bias=inc_bias,
@@ -146,16 +141,16 @@ def run_training(data_name, num_spins, num_hidden, lr, num_epochs, optimizer):
             log_prob.backward()  # backward pass
             optimizer.step()  # update parameters
 
-            avg_loss += log_prob.detach()
+            avg_loss += log_prob.detach().item()
 
-        print("Epoch: ", epoch)
+        # print("Epoch: ", epoch)
         if epoch % period == 0:
             energy = rnn_model.energy(model, true_energy, data_name, num_samples)
             samples_per_batch = samples.size(1) // batch_size
             avg_loss /= samples_per_batch
 
-            print("Abs. energy diff: ", energy)
-            print("Loss function value: ", avg_loss)
+            # print("Abs. energy diff: ", energy)
+            # print("Loss function value: ", avg_loss)
 
             # Write training info and data to files
             training_file = open(training_results_name, "a")

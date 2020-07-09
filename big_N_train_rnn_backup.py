@@ -144,16 +144,16 @@ def run_training(data_name, num_spins, num_hidden, lr, num_epochs, optimizer):
             log_prob.backward()  # backward pass
             optimizer.step()  # update parameters
 
-            avg_loss += log_prob.detach()
+            avg_loss += log_prob.detach().item()
 
-        print("Epoch: ", epoch)
+        # print("Epoch: ", epoch)
         if epoch % period == 0:
             energy = rnn_model.energy(model, true_energy, data_name, num_samples)
             samples_per_batch = samples.size(1) // batch_size
             avg_loss /= samples_per_batch
 
-            print("Abs. energy diff: ", energy)
-            print("Loss function value: ", avg_loss)
+            # print("Abs. energy diff: ", energy)
+            # print("Loss function value: ", avg_loss)
 
             # Write training info and data to files
             training_file = open(training_results_name, "a")
