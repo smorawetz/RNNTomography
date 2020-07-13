@@ -9,7 +9,7 @@ import rnn_model_enforce_symm as rnn_model  # local, has relevant functions
 
 # Define physical parameters
 input_dim = 2  # values inputs can take, e.g. 2 for spin-1/2
-fixed_mag = 0  # value of total magnetization to enforce during training
+fixed_mag = 0  # enforced total magnetization of samples
 
 # Define NN parameters
 num_layers = 3  # number of stacked unit cells

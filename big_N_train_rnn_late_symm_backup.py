@@ -112,7 +112,9 @@ def run_training(data_name, num_spins, num_hidden, lr, num_epochs, optimizer):
 
     # Add initial value of energy estimator to file
     if init_epoch == 1:
-        init_energy = rnn_model.energy(model, true_energy, data_name, num_samples, False)
+        init_energy = rnn_model.energy(
+            model, true_energy, data_name, num_samples, False
+        )
         training_file = open(training_results_name, "w")
         training_file.write("{0} {1} {2}".format(0, init_energy, 0))
         training_file.write("\n")
@@ -147,8 +149,12 @@ def run_training(data_name, num_spins, num_hidden, lr, num_epochs, optimizer):
 
         # print("Epoch: ", epoch)
         if epoch % period == 0:
-            passed_ep = epoch >= impose_symm_ep  # where or not symmetry is to be imposed
-            energy = rnn_model.energy(model, true_energy, data_name, num_samples, passed_ep)
+            passed_ep = (
+                epoch >= impose_symm_ep
+            )  # where or not symmetry is to be imposed
+            energy = rnn_model.energy(
+                model, true_energy, data_name, num_samples, passed_ep
+            )
             samples_per_batch = samples.size(1) // batch_size
             avg_loss /= samples_per_batch
 
