@@ -5,11 +5,10 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-import rnn_model_late_symm as rnn_model  # local, has relevant functions
+import rnn_model_no_symm as rnn_model  # local, has relevant functions
 
 # Define physical parameters
 input_dim = 2  # values inputs can take, e.g. 2 for spin-1/2
-fixed_mag = 0  # enforced total magnetization of samples
 
 # Define NN parameters
 num_layers = 3  # number of stacked unit cells
@@ -18,7 +17,6 @@ unit_cell = nn.GRUCell  # basic cell of NN (e.g. RNN, LSTM, etc.)
 
 # Define training parameters
 batch_size = 50  # size of mini_batches of data
-impose_symm_ep = 500  # epoch at which to start imposing symmetry
 
 # Define training evaluation parameters
 num_samples = 100  # number of samples to average energy over
@@ -30,7 +28,9 @@ torch.set_default_tensor_type(torch.DoubleTensor)
 data_folder = "replace_with_path_to_data"
 
 
-def run_training(data_name, num_spins, num_hidden, lr, num_epochs, optimizer, track_fid, seed):
+def run_training(
+    data_name, num_spins, num_hidden, lr, num_epochs, optimizer, track_fid, seed
+):
     """
         data_name:  str
                     name under which data is stored, can be 'tfim' or 'xy'
@@ -50,6 +50,7 @@ def run_training(data_name, num_spins, num_hidden, lr, num_epochs, optimizer, tr
                     seed to use for RNG (for reproducibility)
     """
     torch.manual_seed(seed)
+
     # Find data according to file naming structure
     samples_path = "{0}/samples_N{1}.txt".format(data_folder, num_spins)
     energy_path = "{0}/energy_N{1}.txt".format(data_folder, num_spins)
@@ -61,7 +62,7 @@ def run_training(data_name, num_spins, num_hidden, lr, num_epochs, optimizer, tr
     true_energy = np.loadtxt(energy_path).item()
 
     # Name chosen for this model to store data under
-    model_name = "{0}_late_symm".format(data_name)
+    model_name = "{0}_no_symm".format(data_name)
 
     # Make folder to store outputs if it does not already exist
     results_path = "../results/{0}_results".format(model_name)
@@ -98,7 +99,6 @@ def run_training(data_name, num_spins, num_hidden, lr, num_epochs, optimizer, tr
 
     model = rnn_model.PositiveWaveFunction(
         num_spins,
-        fixed_mag=fixed_mag,
         input_dim=input_dim,
         num_hidden=num_hidden,
         num_layers=num_layers,
@@ -144,8 +144,7 @@ def run_training(data_name, num_spins, num_hidden, lr, num_epochs, optimizer, tr
 
             optimizer.zero_grad()  # clear gradients
 
-            passed_ep = epoch >= impose_symm_ep
-            nn_outputs = model(batch_hot, passed_ep=passed_ep)  # forward pass
+            nn_outputs = model(batch_hot)  # forward pass
 
             # Compute log-probability to use as cost function
             log_prob = rnn_model.log_prob(nn_outputs, batch)
@@ -162,10 +161,7 @@ def run_training(data_name, num_spins, num_hidden, lr, num_epochs, optimizer, tr
                 fid = rnn_model.fidelity(true_state, nn_probs)
                 div = rnn_model.KL_div(true_state, nn_probs)
 
-            passed_ep = epoch >= impose_symm_ep  # whether to impose symmetry
-            energy = rnn_model.energy(
-                model, true_energy, data_name, num_samples, passed_ep
-            )
+            energy = rnn_model.energy(model, true_energy, data_name, num_samples)
             samples_per_batch = samples.size(1) // batch_size
             avg_loss /= samples_per_batch
 

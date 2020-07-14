@@ -29,7 +29,9 @@ torch.set_default_tensor_type(torch.DoubleTensor)
 data_folder = "replace_with_path_to_data"
 
 
-def run_training(data_name, num_spins, num_hidden, lr, num_epochs, optimizer, track_fid, seed):
+def run_training(
+    data_name, num_spins, num_hidden, lr, num_epochs, optimizer, track_fid, seed
+):
     """
         data_name:  str
                     name under which data is stored, can be 'tfim' or 'xy'

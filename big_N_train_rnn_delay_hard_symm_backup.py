@@ -5,11 +5,11 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-import rnn_model_enforce_symm as rnn_model  # local, has relevant functions
+import rnn_model_delay_hard_symm as rnn_model  # local, has relevant functions
 
 # Define physical parameters
 input_dim = 2  # values inputs can take, e.g. 2 for spin-1/2
-fixed_mag = 0  # enforced total magnetization of samples
+fixed_mag = 0  # value of total magnetization to enforce during training
 
 # Define NN parameters
 num_layers = 3  # number of stacked unit cells
@@ -18,18 +18,20 @@ unit_cell = nn.GRUCell  # basic cell of NN (e.g. RNN, LSTM, etc.)
 
 # Define training parameters
 batch_size = 50  # size of mini_batches of data
+impose_symm_ep = 50  # epoch at which to start imposing symmetry
 
 # Define training evaluation parameters
 num_samples = 100  # number of samples to average energy over
 
 # Define numerical parameters
 torch.set_default_tensor_type(torch.DoubleTensor)
+torch.manual_seed(0)
 
 # Information about where to find data
 data_folder = "replace_with_path_to_data"
 
 
-def run_training(data_name, num_spins, num_hidden, lr, num_epochs, optimizer, track_fid, seed):
+def run_training(data_name, num_spins, num_hidden, lr, num_epochs, optimizer):
     """
         data_name:  str
                     name under which data is stored, can be 'tfim' or 'xy'
@@ -43,24 +45,17 @@ def run_training(data_name, num_spins, num_hidden, lr, num_epochs, optimizer, tr
                     the number of epochs to train for
         optimizer:  torch.optim
                     the type of optimizer to use in training
-        track_fid:  bool
-                    whether or not to keep track of fidelity and KL divergence
-        seed:       int
-                    seed to use for RNG (for reproducibility)
     """
-    torch.manual_seed(seed)
     # Find data according to file naming structure
-    samples_path = "{0}/samples_N{1}.txt".format(data_folder, num_spins)
-    energy_path = "{0}/energy_N{1}.txt".format(data_folder, num_spins)
-    state_path = "{0}/psi_N{1}.txt".format(data_folder, num_spins)
+    samples_path = "{0}/samples_name.txt".format(data_folder, num_spins)
+    energy_path = "{0}/energy_name.txt".format(data_folder, num_spins)
 
     # Load in samples
     samples = torch.Tensor(np.loadtxt(samples_path))
-    true_state = torch.Tensor(np.loadtxt(state_path)[:, 0])
     true_energy = np.loadtxt(energy_path).item()
 
     # Name chosen for this model to store data under
-    model_name = "{0}_immediate_symm".format(data_name)
+    model_name = "{0}_late_symm".format(data_name)
 
     # Make folder to store outputs if it does not already exist
     results_path = "../results/{0}_results".format(model_name)
@@ -92,9 +87,6 @@ def run_training(data_name, num_spins, num_hidden, lr, num_epochs, optimizer, tr
     samples = samples.permute(1, 0)
 
     # Create Hilbert space, instantiate model and optimizer
-    if track_fid:
-        hilb_space = rnn_model.prep_hilb_space(num_spins, input_dim)
-
     model = rnn_model.PositiveWaveFunction(
         num_spins,
         fixed_mag=fixed_mag,
@@ -108,27 +100,28 @@ def run_training(data_name, num_spins, num_hidden, lr, num_epochs, optimizer, tr
     )
     optimizer = optimizer(model.parameters(), lr=lr)
 
-    period = 5  # evaluate training every period
-
-    # Add initial value of evaluators to file
-    if track_fid:
-        init_nn_probs = rnn_model.probability(model, hilb_space)
-        init_fid = rnn_model.fidelity(true_state, init_nn_probs)
-        init_div = rnn_model.KL_div(true_state, init_nn_probs)
-    init_energy = rnn_model.energy(model, true_energy, data_name, num_samples)
-    training_file = open(training_results_name, "w")
-
-    if track_fid:
-        training_file.write(
-            "{0} {1} {2} {3} {4}".format(0, init_fid, init_div, init_energy, 0)
-        )
+    if os.path.isfile(training_model_name):
+        checkpoint = torch.load(training_model_name)
+        init_epoch = checkpoint["epoch"]
+        model.load_state_dict(checkpoint["model_state_dict"])
+        optimizer.load_state_dict(checkpoint["optim_state_dict"])
     else:
-        training_file.write("{0} {1} {2} {3} {4}".format(0, 0, 0, init_energy, 0))
-    training_file.write("\n")
-    training_file.close()
+        init_epoch = 1
+
+    period = 25  # evaluate training every period
+
+    # Add initial value of energy estimator to file
+    if init_epoch == 1:
+        init_energy = rnn_model.energy(
+            model, true_energy, data_name, num_samples, False
+        )
+        training_file = open(training_results_name, "w")
+        training_file.write("{0} {1} {2}".format(0, init_energy, 0))
+        training_file.write("\n")
+        training_file.close()
 
     # Do training
-    for epoch in range(1, num_epochs + 1):
+    for epoch in range(init_epoch, num_epochs + 1):
 
         # Split data into batches and then loop over all batches
         permutation = torch.randperm(samples.size(1))
@@ -143,7 +136,8 @@ def run_training(data_name, num_spins, num_hidden, lr, num_epochs, optimizer, tr
 
             optimizer.zero_grad()  # clear gradients
 
-            nn_outputs = model(batch_hot)  # forward pass
+            passed_ep = epoch >= impose_symm_ep
+            nn_outputs = model(batch_hot, passed_ep=passed_ep)  # forward pass
 
             # Compute log-probability to use as cost function
             log_prob = rnn_model.log_prob(nn_outputs, batch)
@@ -153,32 +147,23 @@ def run_training(data_name, num_spins, num_hidden, lr, num_epochs, optimizer, tr
 
             avg_loss += log_prob.detach().item()
 
-        print("Epoch: ", epoch)
+        # print("Epoch: ", epoch)
         if epoch % period == 0:
-            if track_fid:
-                nn_probs = rnn_model.probability(model, hilb_space)
-                fid = rnn_model.fidelity(true_state, nn_probs)
-                div = rnn_model.KL_div(true_state, nn_probs)
-
-            energy = rnn_model.energy(model, true_energy, data_name, num_samples)
+            passed_ep = (
+                epoch >= impose_symm_ep
+            )  # where or not symmetry is to be imposed
+            energy = rnn_model.energy(
+                model, true_energy, data_name, num_samples, passed_ep
+            )
             samples_per_batch = samples.size(1) // batch_size
             avg_loss /= samples_per_batch
 
-            print("Fidelity: ", fid)
-            print("KL div: ", div)
-            print("Abs. energy diff: ", energy)
-            print("Loss function value: ", avg_loss)
+            # print("Abs. energy diff: ", energy)
+            # print("Loss function value: ", avg_loss)
 
             # Write training info and data to files
             training_file = open(training_results_name, "a")
-            if track_fid:
-                training_file.write(
-                    "{0} {1} {2} {3} {4}".format(epoch, fid, div, energy, avg_loss)
-                )
-            else:
-                training_file.write(
-                    "{0} {1} {2} {3} {4}".format(epoch, 0, 0, energy, avg_loss)
-                )
+            training_file.write("{0} {1} {2}".format(epoch, energy, avg_loss))
             training_file.write("\n")
             training_file.close()
 

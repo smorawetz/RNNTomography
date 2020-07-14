@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-import rnn_model_enforce_symm as rnn_model  # local, has relevant functions
+import rnn_model_hard_symm as rnn_model  # local, has relevant functions
 
 # Define physical parameters
 input_dim = 2  # values inputs can take, e.g. 2 for spin-1/2

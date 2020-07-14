@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-import rnn_model  # local, has relevant functions
+import rnn_model_no_symm as rnn_model  # local, has relevant functions
 
 # Define physical parameters
 # num_spins = 4  # number of spins/qubits -- NOTE: Outdated
