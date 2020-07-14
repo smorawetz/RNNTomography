@@ -54,7 +54,7 @@ def run_training(data_name, num_spins, num_hidden, lr, num_epochs, optimizer):
     true_energy = np.loadtxt(energy_path).item()
 
     # Name chosen for this model to store data under
-    model_name = "{0}_immediate_symm".format(data_name)
+    model_name = "{0}_hard_symm".format(data_name)
 
     # Make folder to store outputs if it does not already exist
     results_path = "../results/{0}_results".format(model_name)

@@ -3,7 +3,6 @@ import torch
 
 import torch.nn as nn
 import torch.nn.functional as F
-import scipy.special
 
 from torch.distributions.utils import probs_to_logits
 
@@ -25,7 +24,7 @@ param_init_dist = torch.nn.init.normal_
 # Compute average energy of RNN samples
 
 
-def energy(wavefunction, true_energy, model_name, num_samples, J=1, B=1):
+def energy(wavefunction, true_energy, model_name, num_samples, impose_symm, J=1, B=1):
     """
         wavefunction:   PositiveWaveFunction
                         trained RNN parametrization of state
@@ -35,6 +34,8 @@ def energy(wavefunction, true_energy, model_name, num_samples, J=1, B=1):
                         name of model, can be "tfim" or "xy"
         num_samples:    int
                         the number of samples over which to average energy
+        impose_symm:    bool
+                        whether of not to start imposing symmetry
         J:              float
                         coupling coefficient from Hamiltonian
         B:              float
@@ -54,7 +55,9 @@ def energy(wavefunction, true_energy, model_name, num_samples, J=1, B=1):
 
     energy_function = model_dict[model_name]
     kwargs = kwarg_dict[model_name]
-    E = energy_function(wavefunction, samples_hot, samples, num_samples, **kwargs)
+    E = energy_function(
+        wavefunction, samples_hot, samples, num_samples, impose_symm, **kwargs
+    )
 
     return abs(E / wavefunction.num_spins - true_energy).item()
 
@@ -62,7 +65,7 @@ def energy(wavefunction, true_energy, model_name, num_samples, J=1, B=1):
 # Average energy of RNN samples for TFIM
 
 
-def tfim_energy(wavefunction, samples_hot, samples, num_samples, J=1, B=1):
+def tfim_energy(wavefunction, samples_hot, samples, num_samples, impose_symm, J=1, B=1):
     """
         wavefunction:   PositiveWaveFunction
                         trained RNN parametrization of state
@@ -73,6 +76,8 @@ def tfim_energy(wavefunction, samples_hot, samples, num_samples, J=1, B=1):
                         autoregressive samples, num_spins x num_samples
         num_samples:    int
                         the number of samples over which to average energy
+        impose_symm:    bool
+                        whether of not to start imposing symmetry
         J:              float
                         coupling coefficient from Hamiltonian
         B:              float
@@ -92,8 +97,12 @@ def tfim_energy(wavefunction, samples_hot, samples, num_samples, J=1, B=1):
     for spin_num in range(wavefunction.num_spins):
         inputs = samples_hot.clone()
         inputs[spin_num, :, :] = 1 - inputs[spin_num, :, :]  # flip spin
-        flipped_outs = wavefunction(inputs, mod_batch_size=num_samples)
-        unflipped_outs = wavefunction(samples_hot, mod_batch_size=num_samples)
+        flipped_outs = wavefunction(
+            inputs, impose_symm=impose_symm, mod_batch_size=num_samples
+        )
+        unflipped_outs = wavefunction(
+            samples_hot, impose_symm=impose_symm, mod_batch_size=num_samples
+        )
 
         flipped_probs = torch.sum(flipped_outs * inputs, dim=2)
         flipped_probs = torch.prod(flipped_probs, dim=0).detach()
@@ -109,7 +118,7 @@ def tfim_energy(wavefunction, samples_hot, samples, num_samples, J=1, B=1):
 # Average energy of RNN samples for XY
 
 
-def xy_energy(wavefunction, samples_hot, samples, num_samples, J=1):
+def xy_energy(wavefunction, samples_hot, samples, num_samples, impose_symm, J=1):
     """
         wavefunction:   PositiveWaveFunction
                         trained RNN parametrization of state
@@ -120,6 +129,8 @@ def xy_energy(wavefunction, samples_hot, samples, num_samples, J=1):
                         autoregressive samples, num_spins x num_samples
         num_samples:    int
                         the number of samples over which to average energy
+        impose_symm:    bool
+                        whether or not to start imposing symmetry
         J:              float
                         coupling coefficient from Hamiltonian
 
@@ -133,8 +144,12 @@ def xy_energy(wavefunction, samples_hot, samples, num_samples, J=1):
         inputs = samples_hot.clone()
         inputs[spin_num, :, :] = 1 - inputs[spin_num, :, :]  # flip spin
         inputs[spin_num + 1, :, :] = 1 - inputs[spin_num + 1, :, :]
-        flipped_outs = wavefunction(inputs, mod_batch_size=num_samples)
-        unflipped_outs = wavefunction(samples_hot, mod_batch_size=num_samples)
+        flipped_outs = wavefunction(
+            inputs, impose_symm=impose_symm, mod_batch_size=num_samples
+        )
+        unflipped_outs = wavefunction(
+            samples_hot, impose_symm=impose_symm, mod_batch_size=num_samples
+        )
 
         flipped_probs = torch.sum(flipped_outs * inputs, dim=2)
         flipped_probs = torch.prod(flipped_probs, dim=0).detach()
@@ -173,7 +188,6 @@ def prep_hilb_space(num_spins, input_dim):
         # Convert int to spin bitstring
         bit_list = list(format(i, "b").zfill(num_spins))
         binary_state = torch.Tensor(np.array(bit_list).astype(int))
-
         hilb_space[:, i, :] = one_hot(binary_state.long())
 
     return hilb_space
@@ -202,7 +216,7 @@ def probability(wavefunction, hilb_space):
 
     # Taking dot product between one-hot encoding, then mulitply over spins
     nn_probs = torch.sum(nn_outputs * hilb_space, dim=2)
-    nn_probs = torch.prod(nn_probs, 0)
+    nn_probs = torch.prod(nn_probs, dim=0)
 
     return nn_probs
 
@@ -240,7 +254,7 @@ def prob_diff(target_state, nn_probs):
                         probabilities of each basis state, predicted by NN
 
         returns:        torch.Tensor
-                        each entry is difference between target and RNN probs 
+                        each entry is difference between target and RNN probs
     """
     targ_probs = torch.pow(torch.abs(target_state), 2)
     probability_diff = nn_probs - targ_probs
@@ -272,7 +286,7 @@ def KL_div(target_state, nn_probs):
     return div.item()
 
 
-# ---- End functions for evaluating training --
+# ---- End functions for evaluating training ----
 
 # ---- The following functions are for other tasks ----
 
@@ -288,7 +302,7 @@ def one_hot(inputs, input_dim=2):
                     input dimension of system (2 for spin-1/2)
 
         returns:    torch.Tensor
-                    a one-hot encoding of inputs
+                    a one-hot encoding of input integer x or tensor of integers
     """
     if type(inputs) == int:
         encoded = torch.zeros(input_dim)
@@ -396,10 +410,12 @@ class PositiveWaveFunction(nn.Module):
         batch_size = mod_batch_size if mod_batch_size else self.batch_size
         return torch.zeros((batch_size, self.num_hidden))
 
-    def autoreg_sample(self, num_samples):
+    def autoreg_sample(self, num_samples, impose_symm):
         """
             num_samples:    int
                             the number of samples to generate
+            impose_symm:    bool
+                            whether of not to start imposing symmetry
     
             Returns:        torch.Tensor
                             autoregressive samples, num_spins x num_samples x input_dim
@@ -436,7 +452,11 @@ class PositiveWaveFunction(nn.Module):
 
             probs /= torch.sum(probs, dim=1).unsqueeze(1)  # renormalize
 
-            sample_dist = torch.distributions.Categorical(probs)
+            if impose_symm:  # draw from modified distribution if impose symm
+                sample_dist = torch.distributions.Categorical(probs)
+            else:  # else draw from pure NN distribution
+                sample_dist = torch.distributions.Categorical(outputs)
+
             gen_samples = sample_dist.sample()
 
             # Add samples to tensor and feed them as next inputs
@@ -449,10 +469,12 @@ class PositiveWaveFunction(nn.Module):
 
         return samples
 
-    def forward(self, data_in, mod_batch_size=None):
+    def forward(self, data_in, impose_symm=False, mod_batch_size=None):
         """
             data_in:        torch.tensor
                             data, shape num_spins x batch_size x input size
+            impose_symm:    bool
+                            whether or not passed epoch to impose symmetry
             mod_batch_size: int
                             used in fidelity calculation to have batch size 1
 
@@ -478,6 +500,7 @@ class PositiveWaveFunction(nn.Module):
 
         # Initialize tensors to hold NN outputs
         probs = torch.zeros((self.num_spins, batch_size, self.input_dim))
+        corr_probs = torch.zeros((self.num_spins, batch_size, self.input_dim))
 
         for spin_num in range(self.num_spins):
             for _ in range(self.num_layers):
@@ -486,8 +509,9 @@ class PositiveWaveFunction(nn.Module):
 
             # Linear transformation, then softmax to output
             probs[spin_num, :, :] = F.softmax(self.lin_trans(self.hidden), dim=1)
+            corr_probs[spin_num, :, :] = F.softmax(self.lin_trans(self.hidden), dim=1)
 
-            if spin_num != 0:
+            if spin_num != 0 and impose_symm:
                 # Index current spin since data already shifted "right"
                 cum_up_spins += data[spin_num, :, 0]
                 cum_dn_spins += data[spin_num, :, 1]
@@ -499,9 +523,14 @@ class PositiveWaveFunction(nn.Module):
                 up_weight = up_weight.unsqueeze(1)
                 dn_weight = dn_weight.unsqueeze(1)
                 weights = torch.cat((up_weight, dn_weight), dim=1)
-                probs[spin_num, :, :] *= weights
+                corr_probs[spin_num, :, :] *= weights
+
+        corr_probs[0, :, :] = probs[0, :, :]  # first spin unchanged
 
         # Renormalize after step function kills impossible spins
-        probs /= torch.sum(probs, dim=2).unsqueeze(2)
+        corr_probs /= torch.sum(corr_probs, dim=2).unsqueeze(2)
 
-        return probs
+        if impose_symm:
+            return corr_probs
+        else:
+            return probs

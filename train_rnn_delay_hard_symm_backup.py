@@ -18,7 +18,6 @@ unit_cell = nn.GRUCell  # basic cell of NN (e.g. RNN, LSTM, etc.)
 
 # Define training parameters
 batch_size = 50  # size of mini_batches of data
-impose_symm_ep = 500  # epoch at which to start imposing symmetry
 
 # Define training evaluation parameters
 num_samples = 100  # number of samples to average energy over
@@ -31,44 +30,59 @@ data_folder = "replace_with_path_to_data"
 
 
 def run_training(
-    data_name, num_spins, num_hidden, lr, num_epochs, optimizer, track_fid, seed
+    data_name,
+    num_spins,
+    num_hidden,
+    lr,
+    num_epochs,
+    optimizer,
+    impose_symm_ep,
+    impose_symm_type,
+    track_fid,
+    seed,
 ):
     """
-        data_name:  str
-                    name under which data is stored, can be 'tfim' or 'xy'
-        num_spins:  int
-                    the number of spins in the system
-        num_hidden: int
-                    the number of hidden units in the RNN parametrization
-        lr:         float
-                    the learning rate
-        num_epochs: int
-                    the number of epochs to train for
-        optimizer:  torch.optim
-                    the type of optimizer to use in training
-        track_fid:  bool
-                    whether or not to keep track of fidelity and KL divergence
-        seed:       int
-                    seed to use for RNG (for reproducibility)
+        data_name:          str
+                            name under which data is stored, can be 'tfim' or 'xy'
+        num_spins:          int
+                            the number of spins in the system
+        num_hidden:         int
+                            the number of hidden units in the RNN parametrization
+        lr:                 float
+                            the learning rate
+        num_epochs:         int
+                            the number of epochs to train for
+        optimizer:          torch.optim
+                            the type of optimizer to use in training
+        impose_symm_ep:     int
+                            the epoch at which to begin imposing symmetry
+        impose_symm_type:   str
+                            one of "symm_first" or "no_symm_first"
+        track_fid:          bool
+                            whether or not to keep track of fidelity and KL divergence
+        seed:               int
+                            seed to use for RNG (for reproducibility)
     """
     torch.manual_seed(seed)
     # Find data according to file naming structure
     samples_path = "{0}/samples_N{1}.txt".format(data_folder, num_spins)
     energy_path = "{0}/energy_N{1}.txt".format(data_folder, num_spins)
-    state_path = "{0}/psi_N{1}.txt".format(data_folder, num_spins)
+    if track_fid:
+        state_path = "{0}/psi_N{1}.txt".format(data_folder, num_spins)
 
     # Load in samples
     samples = torch.Tensor(np.loadtxt(samples_path))
-    true_state = torch.Tensor(np.loadtxt(state_path)[:, 0])
     true_energy = np.loadtxt(energy_path).item()
+    if track_fid:
+        true_state = torch.Tensor(np.loadtxt(state_path)[:, 0])
 
     # Name chosen for this model to store data under
-    model_name = "{0}_late_symm".format(data_name)
+    model_name = "{0}_delay_hard_symm_{1}".format(data_name, impose_symm_type)
 
     # Make folder to store outputs if it does not already exist
     results_path = "../results/{0}_results".format(model_name)
-    study_path = "{0}/N{1}_nh{2}_lr{3}_ep{4}".format(
-        results_path, num_spins, num_hidden, lr, num_epochs
+    study_path = "{0}/N{1}_nh{2}_lr{3}_ep{4}_symm_ep{5}".format(
+        results_path, num_spins, num_hidden, lr, num_epochs, impose_symm_ep
     )
 
     if not os.path.exists(results_path):
@@ -78,11 +92,11 @@ def run_training(
         os.makedirs(study_path)
 
     # Define names for training data and results
-    training_results_name = "{0}/training_results_rnn_{1}_N{2}_nh{3}_lr{4}_ep{5}.txt".format(
-        study_path, model_name, num_spins, num_hidden, lr, num_epochs
+    training_results_name = "{0}/training_results_rnn_{1}_N{2}_nh{3}_lr{4}_ep{5}_symm_ep{6}_seed{7}.txt".format(
+        study_path, model_name, num_spins, num_hidden, lr, num_epochs, impose_symm_ep, seed
     )
-    training_model_name = "{0}/rnn_state_{1}_N{2}_nh{3}_lr{4}_ep{5}.pt".format(
-        study_path, model_name, num_spins, num_hidden, lr, num_epochs
+    training_model_name = "{0}/rnn_state_{1}_N{2}_nh{3}_lr{4}_ep{5}_symm_ep{6}_seed{7}.pt".format(
+        study_path, model_name, num_spins, num_hidden, lr, num_epochs, impose_symm_ep, seed
     )
 
     # Apply one-hot encoding to sample data
@@ -118,6 +132,12 @@ def run_training(
         init_nn_probs = rnn_model.probability(model, hilb_space)
         init_fid = rnn_model.fidelity(true_state, init_nn_probs)
         init_div = rnn_model.KL_div(true_state, init_nn_probs)
+
+    if impose_symm_type == "no_symm_first":
+        impose_symm = False
+    elif impose_symm_type == "symm_first":
+        impose_symm = True
+
     init_energy = rnn_model.energy(model, true_energy, data_name, num_samples)
     training_file = open(training_results_name, "w")
 
@@ -140,14 +160,18 @@ def run_training(
 
         avg_loss = 0  # for tracking loss function
 
+        if impose_symm_type == "no_symm_first":
+            impose_symm = epoch >= impose_symm_ep
+        elif impose_symm_type == "symm_first":
+            impose_symm = epoch < impose_symm_ep
+
         for batch_start in range(0, samples.size(1), batch_size):
             batch_hot = samples_hot[:, batch_start : batch_start + batch_size, :]
             batch = samples[:, batch_start : batch_start + batch_size]
 
             optimizer.zero_grad()  # clear gradients
 
-            passed_ep = epoch >= impose_symm_ep
-            nn_outputs = model(batch_hot, passed_ep=passed_ep)  # forward pass
+            nn_outputs = model(batch_hot, impose_symm=impose_symm)  # forward pass
 
             # Compute log-probability to use as cost function
             log_prob = rnn_model.log_prob(nn_outputs, batch)
@@ -164,9 +188,8 @@ def run_training(
                 fid = rnn_model.fidelity(true_state, nn_probs)
                 div = rnn_model.KL_div(true_state, nn_probs)
 
-            passed_ep = epoch >= impose_symm_ep  # whether to impose symmetry
             energy = rnn_model.energy(
-                model, true_energy, data_name, num_samples, passed_ep
+                model, true_energy, data_name, num_samples, impose_symm
             )
             samples_per_batch = samples.size(1) // batch_size
             avg_loss /= samples_per_batch

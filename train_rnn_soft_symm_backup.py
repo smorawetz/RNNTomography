@@ -51,15 +51,18 @@ def run_training(
                     seed to use for RNG (for reproducibility)
     """
     torch.manual_seed(seed)
+
     # Find data according to file naming structure
     samples_path = "{0}/samples_N{1}.txt".format(data_folder, num_spins)
     energy_path = "{0}/energy_N{1}.txt".format(data_folder, num_spins)
-    state_path = "{0}/psi_N{1}.txt".format(data_folder, num_spins)
+    if track_fid:
+        state_path = "{0}/psi_N{1}.txt".format(data_folder, num_spins)
 
     # Load in samples
     samples = torch.Tensor(np.loadtxt(samples_path))
-    true_state = torch.Tensor(np.loadtxt(state_path)[:, 0])
     true_energy = np.loadtxt(energy_path).item()
+    if track_fid:
+        true_state = torch.Tensor(np.loadtxt(state_path)[:, 0])
 
     # Name chosen for this model to store data under
     model_name = "{0}_soft_symm".format(data_name)
@@ -77,11 +80,11 @@ def run_training(
         os.makedirs(study_path)
 
     # Define names for training data and results
-    training_results_name = "{0}/training_results_rnn_{1}_N{2}_nh{3}_lr{4}_ep{5}.txt".format(
-        study_path, model_name, num_spins, num_hidden, lr, num_epochs
+    training_results_name = "{0}/training_results_rnn_{1}_N{2}_nh{3}_lr{4}_ep{5}_seed{6}.txt".format(
+        study_path, model_name, num_spins, num_hidden, lr, num_epochs, seed
     )
-    training_model_name = "{0}/rnn_state_{1}_N{2}_nh{3}_lr{4}_ep{5}.pt".format(
-        study_path, model_name, num_spins, num_hidden, lr, num_epochs
+    training_model_name = "{0}/rnn_state_{1}_N{2}_nh{3}_lr{4}_ep{5}_seed{6}.pt".format(
+        study_path, model_name, num_spins, num_hidden, lr, num_epochs, seed
     )
 
     # Apply one-hot encoding to sample data
