@@ -122,10 +122,15 @@ def run_training(
 
     period = 25  # evaluate training every period
 
+    if impose_symm_type == "no_symm_first":
+        impose_symm = False
+    elif impose_symm_type == "symm_first":
+        impose_symm = True
+
     # Add initial value of energy estimator to file
     if init_epoch == 1:
         init_energy = rnn_model.energy(
-            model, true_energy, data_name, num_samples, False
+            model, true_energy, data_name, num_samples, impose_symm
         )
         training_file = open(training_results_name, "w")
         training_file.write("{0} {1} {2}".format(0, init_energy, 0))

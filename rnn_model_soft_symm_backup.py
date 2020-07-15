@@ -3,7 +3,6 @@ import torch
 
 import torch.nn as nn
 import torch.nn.functional as F
-import scipy.special
 
 from torch.distributions.utils import probs_to_logits
 
@@ -173,7 +172,6 @@ def prep_hilb_space(num_spins, input_dim):
         # Convert int to spin bitstring
         bit_list = list(format(i, "b").zfill(num_spins))
         binary_state = torch.Tensor(np.array(bit_list).astype(int))
-
         hilb_space[:, i, :] = one_hot(binary_state.long())
 
     return hilb_space
@@ -240,7 +238,7 @@ def prob_diff(target_state, nn_probs):
                         probabilities of each basis state, predicted by NN
 
         returns:        torch.Tensor
-                        each entry is difference between target and RNN probs 
+                        each entry is difference between target and RNN probs
     """
     targ_probs = torch.pow(torch.abs(target_state), 2)
     probability_diff = nn_probs - targ_probs
@@ -319,6 +317,27 @@ def log_prob(nn_outputs, data):
     log_probs = torch.sum(torch.log(probs), dim=0)
     log_prob = -torch.mean(log_probs)
     return log_prob
+
+
+# Compute n permute k for an entire array, element-wise
+
+def n_perm_k(n, k_tensor):
+    """
+        n:          int
+                    value to use for n in n permute k
+        k_tensor:   torch.Tensor
+                    tensor of values to use for k in n permute k 
+
+        returns:    torch.Tensor
+                    tensor where i-th element is n permute k_tensor[i]
+    """
+    perm_tensor = torch.Tensor(k_tensor.size())
+    for i in range(k_tensor.size(0)):
+        n_fact = np.math.factorial(n)
+        k_fact = np.math.factorial(max(0, k_tensor[i]))
+        perm_tensor[i] = (n_fact // k_fact) * np.heaviside(k_tensor[i], 1)
+
+    return perm_tensor
 
 
 # Create a class for the model
@@ -494,10 +513,11 @@ class PositiveWaveFunction(nn.Module):
                 to_alloc = self.num_spins - spin_num  # number allocated so far
                 up_alloc = self.num_spins // 2 - cum_up_spins  # up spins remaining
                 dn_alloc = self.num_spins // 2 - cum_dn_spins  # down spins remaining
-                up_weight = torch.Tensor(scipy.special.comb(to_alloc, up_alloc))
-                dn_weight = torch.Tensor(scipy.special.comb(to_alloc, dn_alloc))
-                up_weight = up_weight.unsqueeze(1)
-                dn_weight = dn_weight.unsqueeze(1)
+                up_weight = torch.Tensor(n_perm_k(to_alloc, up_alloc))
+                dn_weight = torch.Tensor(n_perm_k(to_alloc, dn_alloc))
+                eps = 1e-12  # to handle when both weights are 0 (fidelity)
+                up_weight = (up_weight + eps).unsqueeze(1)
+                dn_weight = (dn_weight + eps).unsqueeze(1)
                 weights = torch.cat((up_weight, dn_weight), dim=1)
                 probs[spin_num, :, :] *= weights
 

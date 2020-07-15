@@ -138,7 +138,7 @@ def run_training(
     elif impose_symm_type == "symm_first":
         impose_symm = True
 
-    init_energy = rnn_model.energy(model, true_energy, data_name, num_samples)
+    init_energy = rnn_model.energy(model, true_energy, data_name, num_samples, impose_symm)
     training_file = open(training_results_name, "w")
 
     if track_fid:
