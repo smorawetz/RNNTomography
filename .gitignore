@@ -2,6 +2,7 @@
 __pycache__
 results/*
 !results/.gitkeep
+!results/.*plot*
 training/*
 !training/.gitkeep
 legacy

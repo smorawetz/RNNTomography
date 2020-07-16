@@ -194,8 +194,9 @@ def run_training(
             samples_per_batch = samples.size(1) // batch_size
             avg_loss /= samples_per_batch
 
-            print("Fidelity: ", fid)
-            print("KL div: ", div)
+            if track_fid:
+                print("Fidelity: ", fid)
+                print("KL div: ", div)
             print("Abs. energy diff: ", energy)
             print("Loss function value: ", avg_loss)
 

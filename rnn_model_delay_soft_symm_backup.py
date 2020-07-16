@@ -347,11 +347,11 @@ def n_perm_k(n, k_tensor):
         returns:    torch.Tensor
                     tensor where i-th element is n permute k_tensor[i]
     """
-    perm_tensor = torch.Tensor(k_tensor.size())
+    perm_tensor = torch.zeros(k_tensor.size())
     for i in range(k_tensor.size(0)):
         n_fact = np.math.factorial(n)
         k_fact = np.math.factorial(max(0, k_tensor[i]))
-        perm_tensor[i] = (n_fact // k_fact) * np.heaviside(k_tensor[i], 1)
+        perm_tensor[i] = (n_fact // k_fact) * np.heaviside(k_tensor[i].item(), 1)
 
     return perm_tensor
 

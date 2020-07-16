@@ -67,12 +67,14 @@ def run_training(
     # Find data according to file naming structure
     samples_path = "{0}/samples_N{1}.txt".format(data_folder, num_spins)
     energy_path = "{0}/energy_N{1}.txt".format(data_folder, num_spins)
-    state_path = "{0}/psi_N{1}.txt".format(data_folder, num_spins)
+    if track_fid:
+        state_path = "{0}/psi_N{1}.txt".format(data_folder, num_spins)
 
     # Load in samples
     samples = torch.Tensor(np.loadtxt(samples_path))
-    true_state = torch.Tensor(np.loadtxt(state_path)[:, 0])
     true_energy = np.loadtxt(energy_path).item()
+    if track_fid:
+        true_state = torch.Tensor(np.loadtxt(state_path)[:, 0])
 
     # Name chosen for this model to store data under
     model_name = "{0}_delay_soft_symm_{1}".format(data_name, impose_symm_type)
@@ -192,8 +194,9 @@ def run_training(
             samples_per_batch = samples.size(1) // batch_size
             avg_loss /= samples_per_batch
 
-            print("Fidelity: ", fid)
-            print("KL div: ", div)
+            if track_fid:
+                print("Fidelity: ", fid)
+                print("KL div: ", div)
             print("Abs. energy diff: ", energy)
             print("Loss function value: ", avg_loss)
 
