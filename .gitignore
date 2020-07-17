@@ -3,8 +3,8 @@ __pycache__
 results/*
 !results/.gitkeep
 !results/*plot*
-graham_results
-!graham_results/*.py
+graham_results/*
+!graham_results/*plot*
 training/*
 !training/.gitkeep
 legacy
