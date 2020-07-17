@@ -4,6 +4,7 @@ results/*
 !results/.gitkeep
 !results/*plot*
 graham_results
+!graham_results/*.py
 training/*
 !training/.gitkeep
 legacy
