@@ -15,11 +15,11 @@ from plotting.plot_fid_error_log import plot_fid_error_log
 # ---- can take on, which will be looped over when producing plots -----
 
 
-studies = ["xy", "xy_enforce_symm", "xy_late_symm", "xy_soft_symm"]
-spin_nums = [2, 4, 6, 8, 10, 12]  # spin numbers to make plots for
+studies = ["xy_no_symm", "xy_hard_symm", "xy_soft_symm"]
+spin_nums = [2, 4, 6, 8, 10] # spin numbers to make plots for
 num_hiddens = [100]  # number of hidden units to make plots for
-lrs = [0.1, 0.01, 0.001]  # number of learning rates to make plots for
-epoch_nums = [250, 1000]  # total epochs of studies to make plots for
+lrs = [0.1, 0.001]  # number of learning rates to make plots for
+epoch_nums = [1000]  # total epochs of studies to make plots for
 
 # Define a list of which of the above specified plots to actually make
 plots_to_make = [

@@ -115,7 +115,7 @@ for i in range(len(MODEL_NAMES)):
         capsize=5,
         color=colour,
     )
-    ax.plot(N_VALS, np.poly1d(np.polyfit(N_VALS, energy_avgs, 1))(N_VALS), linestyle="dashed", color=colour)
+    # ax.plot(N_VALS, np.poly1d(np.polyfit(N_VALS, energy_avgs, 1))(N_VALS), linestyle="dashed", color=colour)
 ax.legend()
 ax.set_title(r"$\frac{|E_{RNN} - E_{DMRG}|}{N}$ for various system sizes")
 ax.set_ylabel(r"$\frac{|E_{RNN} - E_{DMRG}|}{N}$")
@@ -123,4 +123,4 @@ ax.set_xlabel(r"$N$")
 
 plt.tight_layout()
 
-plt.savefig("compare_results/all_compare/energy_vs_N.png")
+plt.savefig("compare_results/all_compare/energy_vs_N_lr{0}.png".format(LR))

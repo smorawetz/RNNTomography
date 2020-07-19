@@ -25,8 +25,8 @@ model_names_dict = {  # assocating file naming with model type
 CALCULATE_AVGS = False  # whether or not to calculate or just make plots
 
 NUM_SEEDS = 5  # the number of different seeds to average over
-N_VALS = [2, 4, 6, 8, 10, 16, 20, 30, 40, 50]
-LR = 0.001
+N_VALS = [2, 4, 6, 8, 10]
+LR = 0.1
 MODEL_NAMES = ["no_symm", "hard_symm", "soft_symm"]
 NUM_SAMPLES = 1000
 
@@ -90,6 +90,29 @@ if not CALCULATE_AVGS:
         energy_stdevs_dict[model_name] = energy_stdevs.copy()
 
 
+fid_avgs_dict = {}
+fid_stdevs_dict = {}
+
+for model_name in MODEL_NAMES:
+    fid_avgs = []
+    fid_stdevs = []
+    for N in N_VALS:
+        seed_fids = []
+        for seed in range(1, NUM_SEEDS + 1):
+            results_folder = "xy_{0}_results".format(model_name)
+            study_folder = "N{0}_nh100_lr{1}_ep1000".format(N, LR)
+            data_file = "training_results_rnn_xy_{0}_{1}_seed{2}.txt".format(model_name, study_folder, seed)
+            data = np.loadtxt("{0}/{1}/{2}".format(results_folder, study_folder, data_file))
+            fid = data[-1, 1]
+            seed_fids.append(fid)
+
+        fid_avgs.append(np.mean(seed_fids))
+        fid_stdevs.append(np.std(seed_fids))
+
+    fid_avgs_dict[model_name] = fid_avgs.copy()
+    fid_stdevs_dict[model_name] = fid_stdevs.copy()
+        
+
 # Get all the same info for fidelities
 
 
@@ -107,23 +130,26 @@ for i in range(len(MODEL_NAMES)):
     model_name = MODEL_NAMES[i]
     energy_avgs = energy_avgs_dict[model_name]
     energy_stdevs = energy_stdevs_dict[model_name]
+    fid_avgs = fid_avgs_dict[model_name]
+    fid_stdevs = fid_stdevs_dict[model_name]
     label = legend_dict[model_name]
     colour = colours[i]
     ax.errorbar(  # main plot with errorbars
-        N_VALS,
         energy_avgs,
-        yerr=energy_stdevs,
+        fid_avgs,
+        xerr=energy_stdevs,
+        yerr=fid_stdevs,
         fmt="o",
         label=label,
         capsize=5,
         color=colour,
     )
-    ax.plot(N_VALS, np.poly1d(np.polyfit(N_VALS, energy_avgs, 1))(N_VALS), linestyle="dashed", color=colour)
+    # ax.plot(N_VALS, np.poly1d(np.polyfit(energy_avgs, fid_avgs, 1))(energy_avgs), linestyle="dashed", color=colour)
 ax.legend()
-ax.set_title(r"$\frac{|E_{RNN} - E_{DMRG}|}{N}$ for various system sizes")
-ax.set_ylabel(r"$\frac{|E_{RNN} - E_{DMRG}|}{N}$")
-ax.set_xlabel(r"$N$")
+ax.set_title(r"Fidelity vs average energy of samples generated at convergence")
+ax.set_ylabel(r"Fidelity")
+ax.set_xlabel(r"$\frac{|E_{RNN} - E_{DMRG}|}{N}$")
 
 plt.tight_layout()
 
-plt.savefig("compare_results/all_compare/energy_vs_N.png")
+plt.savefig("compare_results/all_compare/energy_vs_fid_lr{0}.png".format(LR))

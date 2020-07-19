@@ -37,7 +37,7 @@ def plot_converged_energy(model_name, num_spins, num_hidden, lr, num_epochs, N_l
 
     for N in N_list:
         temp_study = "N{0}_nh{1}_lr{2}_ep{3}".format(N, num_hidden, lr, num_epochs)
-        data_file = "training_results_rnn_{0}_{1}.txt".format(model_name, temp_study)
+        data_file = "training_results_rnn_{0}_{1}_seed1.txt".format(model_name, temp_study)
 
         data_path = "{0}_results/{1}/{2}".format(model_name, temp_study, data_file)
 

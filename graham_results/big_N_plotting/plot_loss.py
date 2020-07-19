@@ -23,7 +23,7 @@ def plot_loss(model_name, num_spins, num_hidden, lr, num_epochs):
     # ------- Getting data -------------
 
     study_name = "N{0}_nh{1}_lr{2}_ep{3}".format(num_spins, num_hidden, lr, num_epochs)
-    data_file = "training_results_rnn_{0}_{1}.txt".format(model_name, study_name)
+    data_file = "training_results_rnn_{0}_{1}_seed1.txt".format(model_name, study_name)
 
     study_path = "{0}_results/{1}".format(model_name, study_name)
     data_path = "{0}_results/{1}/{2}".format(model_name, study_name, data_file)
@@ -31,7 +31,7 @@ def plot_loss(model_name, num_spins, num_hidden, lr, num_epochs):
     data = np.loadtxt(data_path)
 
     epochs = data[1:, 0]
-    loss = data[1:, 2]
+    loss = data[1:, 4]
 
     # ------- Making the plot ------------
 

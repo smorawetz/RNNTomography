@@ -35,7 +35,7 @@ def plot_compare_log_fid_energy(model_names, num_spinss, num_hidden, lrs, num_ep
             num_spins, num_hidden, lr, num_epochs
         )
         study_path = "{0}_results/{1}".format(model_name, study_name)
-        data_file = "training_results_rnn_{0}_{1}.txt".format(model_name, study_name)
+        data_file = "training_results_rnn_{0}_{1}_seed1.txt".format(model_name, study_name)
         data_path = "{0}_results/{1}/{2}".format(model_name, study_name, data_file)
 
         data_list.append(np.loadtxt(data_path))
@@ -53,11 +53,8 @@ def plot_compare_log_fid_energy(model_names, num_spinss, num_hidden, lrs, num_ep
     for i in range(num_studies):
         data = data_list[i]
         epochs = data[:, 0]
-        if num_spinss[i] < 20:
-            fids = data[:, 1]
-            energies = data[:, 3]
-        else:
-            energies = data[:, 1]
+        fids = data[:, 1]
+        energies = data[:, 3]
 
         ax = axs[0, i]
         ax.plot(
@@ -73,7 +70,7 @@ def plot_compare_log_fid_energy(model_names, num_spinss, num_hidden, lrs, num_ep
         if num_spinss[i] <= 12:
             ax.plot(epochs, (1 - fids), "o", color="C0", markeredgecolor="black")
             if i == 0:
-                ax.set_ylabel("Fidelity")
+                ax.set_ylabel(r"$\log|1 - Fidelity|$")
 
     plt.subplots_adjust(wspace=0, hspace=0)
     fig.text(0.5, 0.02, r"Epoch", ha="center")
