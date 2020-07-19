@@ -5,6 +5,8 @@ results/*
 !results/*plot*
 graham_results/*
 !graham_results/*plot*
+!graham_results/energies
+!graham_results/compare_results
 training/*
 !training/.gitkeep
 legacy
