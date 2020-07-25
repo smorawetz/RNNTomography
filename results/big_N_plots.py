@@ -8,11 +8,11 @@ from big_N_plotting.plot_loss import plot_loss
 
 # ---- Define parameters related to which studies to make plots for ----
 # ---- where each is a list of possible values that some parameter -----
-# ---- can take on, which will be looped over when producing plots ----- 
+# ---- can take on, which will be looped over when producing plots -----
 
 
 studies = ["xy", "xy_enforce_symm"]
-spin_nums = range(50, 500+1, 50)  # spin numbers to make plots for
+spin_nums = range(50, 500 + 1, 50)  # spin numbers to make plots for
 num_hiddens = [100]  # number of hidden units to make plots for
 lrs = [0.1, 0.001]  # number of learning rates to make plots for
 epoch_nums = [1000]  # total epochs of studies to make plots for

@@ -5,20 +5,20 @@ import matplotlib.pyplot as plt
 
 def plot_compare_fid_energy(model_names, num_spinss, num_hidden, lrs, num_epochs):
     """
-        model_names:    listof str
-                        name of models for which making plot, e.g.
-                        tfim, xy, or xy_enforce_symm
-        num_spinss:     listof int
-                        list of number of spins of each plot
-        num_hidden:     int
-                        number of hidden units in RNN
-        lrs:            listof float
-                        learning rate of each study being compared
-        num_epochs:     int
-                        number of epochs of training
+    model_names:    listof str
+                    name of models for which making plot, e.g.
+                    tfim, xy, or xy_enforce_symm
+    num_spinss:     listof int
+                    list of number of spins of each plot
+    num_hidden:     int
+                    number of hidden units in RNN
+    lrs:            listof float
+                    learning rate of each study being compared
+    num_epochs:     int
+                    number of epochs of training
 
-        returns:        None
-                        saves, does not return anything
+    returns:        None
+                    saves, does not return anything
     """
 
     num_studies = len(model_names)
@@ -35,7 +35,9 @@ def plot_compare_fid_energy(model_names, num_spinss, num_hidden, lrs, num_epochs
             num_spins, num_hidden, lr, num_epochs
         )
         study_path = "{0}_results/{1}".format(model_name, study_name)
-        data_file = "training_results_rnn_{0}_{1}_seed1.txt".format(model_name, study_name)
+        data_file = "training_results_rnn_{0}_{1}_seed1.txt".format(
+            model_name, study_name
+        )
         data_path = "{0}_results/{1}/{2}".format(model_name, study_name, data_file)
 
         data_list.append(np.loadtxt(data_path))
@@ -47,8 +49,14 @@ def plot_compare_fid_energy(model_names, num_spinss, num_hidden, lrs, num_epochs
         ncols=num_studies,
         sharex="col",
         sharey="row",
-        figsize=(5 * num_studies, 6),
+        figsize=(4 * num_studies, 6),
     )
+
+    nice_names_dict = {
+        "xy_no_symm": "No symmetry",
+        "xy_hard_symm": "'Hard' symmetry",
+        "xy_soft_symm": "'Soft' symmetry",
+    }
 
     for i in range(num_studies):
         data = data_list[i]
@@ -61,7 +69,10 @@ def plot_compare_fid_energy(model_names, num_spinss, num_hidden, lrs, num_epochs
             epochs, energies, "o", color="C0", markeredgecolor="black",
         )
         ax.set_yscale("log")
-        ax.set_title(r"{0}, N = {1}".format(model_names[i].upper(), num_spinss[i]))
+        ax.set_title(
+            r"{0}, N = {1}".format(nice_names_dict[model_names[i]], num_spinss[i])
+        )
+        ax.set_ylim(6e-7, 2)
         if i == 0:
             ax.set_ylabel(r"$\frac{|E_{RNN} - E_{targ}|}{N}$")
 

@@ -7,11 +7,11 @@ from plotting.plot_converged_min_energy import plot_converged_min_energy
 
 # ---- Define parameters related to which studies to make plots for ----
 # ---- where each is a list of possible values that some parameter -----
-# ---- can take on, which will be looped over when producing plots ----- 
+# ---- can take on, which will be looped over when producing plots -----
 
 
 studies = ["tfim", "xy", "xy_enforce_symm"]
-spin_nums = range(2,10+1,2)  # spin numbers to make plots for
+spin_nums = range(2, 10 + 1, 2)  # spin numbers to make plots for
 num_hiddens = [100]  # number of hidden units to make plots for
 lrs = [0.1, 0.001]  # number of learning rates to make plots for
 epoch_nums = [250, 1000]  # total epochs of studies to make plots for
@@ -20,7 +20,10 @@ epoch_nums = [250, 1000]  # total epochs of studies to make plots for
 plots_to_make = ["final_energy", "min_final_energy"]
 
 # Define a dictionary to relate keywords to plotting functions to call
-plots_dict = {"final_energy": plot_converged_energy, "min_final_energy": plot_converged_min_energy}
+plots_dict = {
+    "final_energy": plot_converged_energy,
+    "min_final_energy": plot_converged_min_energy,
+}
 
 
 for vals in itertools.product(studies, spin_nums, num_hiddens, lrs, epoch_nums):

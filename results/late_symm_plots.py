@@ -6,7 +6,7 @@ from plotting.plot_late_symm_fid import plot_late_symm_fid
 
 # ---- Define parameters related to which studies to make plots for ----
 # ---- where each is a list of possible values that some parameter -----
-# ---- can take on, which will be looped over when producing plots ----- 
+# ---- can take on, which will be looped over when producing plots -----
 
 
 studies = ["xy_late_symm"]

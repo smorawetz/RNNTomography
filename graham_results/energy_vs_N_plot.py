@@ -22,13 +22,14 @@ model_names_dict = {  # assocating file naming with model type
     "delay_soft_symm_no_symm_first": rnn_model_delay_soft_symm,
 }
 
-CALCULATE_AVGS = False  # whether or not to calculate or just make plots
+CALCULATE_AVGS = True  # whether or not to calculate or just make plots
+
 
 NUM_SEEDS = 5  # the number of different seeds to average over
 N_VALS = [2, 4, 6, 8, 10, 16, 20, 30, 40, 50]
-LR = 0.001
-MODEL_NAMES = ["no_symm", "hard_symm", "soft_symm"]
+LR = 0.1
 NUM_SAMPLES = 1000
+MODEL_NAMES = ["no_symm", "hard_symm", "soft_symm"]
 
 # Want to compute the energy estimator of each parametrization for
 # every value in N_VALS for each seed up to NUM_SEED by averaging
@@ -72,7 +73,9 @@ if CALCULATE_AVGS:
             energy_avgs.append(energy_avg)
             energy_stdevs.append(energy_stdev)
 
-            np.savetxt("energies/avg_energy_{0}_N{1}.txt".format(model_name, N), vals)
+            np.savetxt(
+                "energies/avg_energy_{0}_N{1}_lr{2}.txt".format(model_name, N, LR), vals
+            )
 
         energy_avgs_dict[model_name] = energy_avgs.copy()
         energy_stdevs_dict[model_name] = energy_stdevs.copy()
@@ -83,7 +86,9 @@ if not CALCULATE_AVGS:
         energy_avgs = []
         energy_stdevs = []
         for N in N_VALS:
-            vals = np.loadtxt("energies/avg_energy_{0}_N{1}.txt".format(model_name, N))
+            vals = np.loadtxt(
+                "energies/avg_energy_{0}_N{1}_lr{2}.txt".format(model_name, N, LR)
+            )
             energy_avgs.append(vals[0])  # avg is stored first
             energy_stdevs.append(vals[1])  # stdev is stored second
         energy_avgs_dict[model_name] = energy_avgs.copy()

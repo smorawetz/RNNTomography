@@ -9,7 +9,7 @@ from compare_plotting.plot_compare_log_fid_energy import plot_compare_log_fid_en
 
 # ---- Define parameters related to which studies to make plots for ----
 # ---- where each is a list of possible values that some parameter -----
-# ---- can take on, which will be looped over when producing plots ----- 
+# ---- can take on, which will be looped over when producing plots -----
 
 
 studies = ["xy", "xy_immediate_symm", "xy_soft_symm"]
@@ -23,7 +23,12 @@ plots_to_make = ["compare fid energy", "compare log fid energy"]
 
 
 # Define a dictionary to relate keywords to plotting functions to call
-plots_dict = {"compare energy": plot_compare_energy, "compare log energy": plot_compare_log_energy, "compare fid energy": plot_compare_fid_energy, "compare log fid energy": plot_compare_log_fid_energy}
+plots_dict = {
+    "compare energy": plot_compare_energy,
+    "compare log energy": plot_compare_log_energy,
+    "compare fid energy": plot_compare_fid_energy,
+    "compare log fid energy": plot_compare_log_fid_energy,
+}
 
 params = [studies, spin_numss, num_hidden, lrs, epoch_num]
 

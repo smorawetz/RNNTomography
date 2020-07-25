@@ -16,7 +16,7 @@ from plotting.plot_fid_error_log import plot_fid_error_log
 
 
 studies = ["xy_no_symm", "xy_hard_symm", "xy_soft_symm"]
-spin_nums = [2, 4, 6, 8, 10] # spin numbers to make plots for
+spin_nums = [2, 4, 6, 8, 10]  # spin numbers to make plots for
 num_hiddens = [100]  # number of hidden units to make plots for
 lrs = [0.1, 0.001]  # number of learning rates to make plots for
 epoch_nums = [1000]  # total epochs of studies to make plots for

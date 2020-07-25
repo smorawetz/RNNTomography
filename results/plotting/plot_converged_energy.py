@@ -5,22 +5,23 @@ import matplotlib.pyplot as plt
 
 avg_over = 10  # number of final energies to average over
 
+
 def plot_converged_energy(model_name, num_spins, num_hidden, lr, num_epochs, N_list):
     """
-        model_name: str
-                    name of model for which making plot, e.g.
-                    tfim, xy, or xy_enforce_symm
-        num_spins:  int
-                    number of spins in system
-        num_hidden: int
-                    number of hidden units in RNN
-        lr:         float
-                    learning rate
-        num_epochs: int
-                    number of epochs of training
+    model_name: str
+                name of model for which making plot, e.g.
+                tfim, xy, or xy_enforce_symm
+    num_spins:  int
+                number of spins in system
+    num_hidden: int
+                number of hidden units in RNN
+    lr:         float
+                learning rate
+    num_epochs: int
+                number of epochs of training
 
-        returns:    None
-                    saves, does not return anything
+    returns:    None
+                saves, does not return anything
     """
 
     # -------- Getting data from all spins
@@ -33,7 +34,6 @@ def plot_converged_energy(model_name, num_spins, num_hidden, lr, num_epochs, N_l
 
     if not os.path.exists(study_path):
         os.makedirs(study_path)
-
 
     for N in N_list:
         temp_study = "N{0}_nh{1}_lr{2}_ep{3}".format(N, num_hidden, lr, num_epochs)

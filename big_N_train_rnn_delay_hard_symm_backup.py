@@ -41,22 +41,22 @@ def run_training(
     impose_symm_type,
 ):
     """
-        data_name:          str
-                            name under which data is stored, can be 'tfim' or 'xy'
-        num_spins:          int
-                            the number of spins in the system
-        num_hidden:         int
-                            the number of hidden units in the RNN parametrization
-        lr:                 float
-                            the learning rate
-        num_epochs:         int
-                            the number of epochs to train for
-        optimizer:          torch.optim
-                            the type of optimizer to use in training
-        impose_symm_ep:     int
-                            the epoch at which to begin imposing symmetry
-        impose_symm_type:   str
-                            one of "no_symm_first" or "symm_first"
+    data_name:          str
+                        name under which data is stored, can be 'tfim' or 'xy'
+    num_spins:          int
+                        the number of spins in the system
+    num_hidden:         int
+                        the number of hidden units in the RNN parametrization
+    lr:                 float
+                        the learning rate
+    num_epochs:         int
+                        the number of epochs to train for
+    optimizer:          torch.optim
+                        the type of optimizer to use in training
+    impose_symm_ep:     int
+                        the epoch at which to begin imposing symmetry
+    impose_symm_type:   str
+                        one of "no_symm_first" or "symm_first"
     """
     # Find data according to file naming structure
     samples_path = "{0}/samples_name.txt".format(data_folder, num_spins)
@@ -82,8 +82,10 @@ def run_training(
         os.makedirs(study_path)
 
     # Define names for training data and results
-    training_results_name = "{0}/training_results_rnn_{1}_N{2}_nh{3}_lr{4}_ep{5}.txt".format(
-        study_path, model_name, num_spins, num_hidden, lr, num_epochs
+    training_results_name = (
+        "{0}/training_results_rnn_{1}_N{2}_nh{3}_lr{4}_ep{5}.txt".format(
+            study_path, model_name, num_spins, num_hidden, lr, num_epochs
+        )
     )
     training_model_name = "{0}/rnn_state_{1}_N{2}_nh{3}_lr{4}_ep{5}.pt".format(
         study_path, model_name, num_spins, num_hidden, lr, num_epochs

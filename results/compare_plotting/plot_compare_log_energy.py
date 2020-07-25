@@ -5,20 +5,20 @@ import matplotlib.pyplot as plt
 
 def plot_compare_log_energy(model_names, num_spinss, num_hidden, lrs, num_epochs):
     """
-        model_names:    listof str
-                        name of models for which making plot, e.g.
-                        tfim, xy, or xy_enforce_symm
-        num_spinss:     listof int
-                        list of number of spins of each plot
-        num_hidden:     int
-                        number of hidden units in RNN
-        lrs:            listof float
-                        learning rate of each study being compared
-        num_epochs:     int
-                        number of epochs of training
+    model_names:    listof str
+                    name of models for which making plot, e.g.
+                    tfim, xy, or xy_enforce_symm
+    num_spinss:     listof int
+                    list of number of spins of each plot
+    num_hidden:     int
+                    number of hidden units in RNN
+    lrs:            listof float
+                    learning rate of each study being compared
+    num_epochs:     int
+                    number of epochs of training
 
-        returns:        None
-                        saves, does not return anything
+    returns:        None
+                    saves, does not return anything
     """
 
     num_studies = len(model_names)

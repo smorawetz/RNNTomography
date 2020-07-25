@@ -4,20 +4,20 @@ import matplotlib.pyplot as plt
 
 def plot_late_symm_fid(model_name, num_spins, num_hidden, lr, num_epochs):
     """
-        model_name: str
-                    name of model for which making plot
-                    currently only xy_late_symm
-        num_spins:  int
-                    number of spins in system
-        num_hidden: int
-                    number of hidden units in RNN
-        lr:         float
-                    learning rate
-        num_epochs: int
-                    number of epochs of training
+    model_name: str
+                name of model for which making plot
+                currently only xy_late_symm
+    num_spins:  int
+                number of spins in system
+    num_hidden: int
+                number of hidden units in RNN
+    lr:         float
+                learning rate
+    num_epochs: int
+                number of epochs of training
 
-        returns:    None
-                    saves, does not return anything
+    returns:    None
+                saves, does not return anything
     """
 
     # ------- Getting data -------------
@@ -40,16 +40,12 @@ def plot_late_symm_fid(model_name, num_spins, num_hidden, lr, num_epochs):
     ax.plot(
         epochs, fids, "o", color="C0", markeredgecolor="black",
     )
-    ax.set_title(
-        r"Fidelity for {0}, N = {1}".format(
-            model_name.upper(), num_spins
-        )
-    )
+    ax.set_title(r"Fidelity for {0}, N = {1}".format(model_name.upper(), num_spins))
     ax.set_xlabel(r"Epoch")
     ax.set_ylabel(r"Fidelity")
     ax.set_ylim(top=1.0)
 
-    ax.axvline(x=500, linestyle='--', color='black')
+    ax.axvline(x=500, linestyle="--", color="black")
 
     plt.tight_layout()
 

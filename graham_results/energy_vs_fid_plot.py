@@ -26,7 +26,7 @@ CALCULATE_AVGS = False  # whether or not to calculate or just make plots
 
 NUM_SEEDS = 5  # the number of different seeds to average over
 N_VALS = [2, 4, 6, 8, 10]
-LR = 0.1
+LR = 0.001
 MODEL_NAMES = ["no_symm", "hard_symm", "soft_symm"]
 NUM_SAMPLES = 1000
 
@@ -101,8 +101,12 @@ for model_name in MODEL_NAMES:
         for seed in range(1, NUM_SEEDS + 1):
             results_folder = "xy_{0}_results".format(model_name)
             study_folder = "N{0}_nh100_lr{1}_ep1000".format(N, LR)
-            data_file = "training_results_rnn_xy_{0}_{1}_seed{2}.txt".format(model_name, study_folder, seed)
-            data = np.loadtxt("{0}/{1}/{2}".format(results_folder, study_folder, data_file))
+            data_file = "training_results_rnn_xy_{0}_{1}_seed{2}.txt".format(
+                model_name, study_folder, seed
+            )
+            data = np.loadtxt(
+                "{0}/{1}/{2}".format(results_folder, study_folder, data_file)
+            )
             fid = data[-1, 1]
             seed_fids.append(fid)
 
@@ -111,7 +115,7 @@ for model_name in MODEL_NAMES:
 
     fid_avgs_dict[model_name] = fid_avgs.copy()
     fid_stdevs_dict[model_name] = fid_stdevs.copy()
-        
+
 
 # Get all the same info for fidelities
 

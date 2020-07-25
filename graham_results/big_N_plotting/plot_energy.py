@@ -4,20 +4,20 @@ import matplotlib.pyplot as plt
 
 def plot_energy(model_name, num_spins, num_hidden, lr, num_epochs):
     """
-        model_name: str
-                    name of model for which making plot, e.g.
-                    tfim, xy, or xy_enforce_symm
-        num_spins:  int
-                    number of spins in system
-        num_hidden: int
-                    number of hidden units in RNN
-        lr:         float
-                    learning rate
-        num_epochs: int
-                    number of epochs of training
+    model_name: str
+                name of model for which making plot, e.g.
+                tfim, xy, or xy_enforce_symm
+    num_spins:  int
+                number of spins in system
+    num_hidden: int
+                number of hidden units in RNN
+    lr:         float
+                learning rate
+    num_epochs: int
+                number of epochs of training
 
-        returns:    None
-                    saves, does not return anything
+    returns:    None
+                saves, does not return anything
     """
 
     # ------- Getting data -------------

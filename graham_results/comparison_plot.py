@@ -12,9 +12,8 @@ from compare_plotting.plot_compare_log_fid_energy import plot_compare_log_fid_en
 # ---- can take on, which will be looped over when producing plots -----
 
 
-# studies = ["xy_no_symm", "xy_soft_symm", "xy_no_symm"]
-studies = ["xy_no_symm", "xy_no_symm", "xy_no_symm", "xy_no_symm", "xy_no_symm"]
-spin_numss = [2, 4, 6, 8, 10]  # spin numbers to make plots for
+studies = ["xy_no_symm", "xy_hard_symm"]
+spin_numss = [10, 10]  # spin numbers to make plots for
 num_hidden = 100  # number of hidden units to make plots for
 lrs = [0.001, 0.001, 0.001, 0.001, 0.001]  # number of learning rates to make plots for
 epoch_num = 1000  # total epochs of studies to make plots for

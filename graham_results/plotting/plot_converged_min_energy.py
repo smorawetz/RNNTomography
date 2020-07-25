@@ -10,20 +10,20 @@ def plot_converged_min_energy(
     model_name, num_spins, num_hidden, lr, num_epochs, N_list
 ):
     """
-        model_name: str
-                    name of model for which making plot, e.g.
-                    tfim, xy, or xy_enforce_symm
-        num_spins:  int
-                    number of spins in system
-        num_hidden: int
-                    number of hidden units in RNN
-        lr:         float
-                    learning rate
-        num_epochs: int
-                    number of epochs of training
+    model_name: str
+                name of model for which making plot, e.g.
+                tfim, xy, or xy_enforce_symm
+    num_spins:  int
+                number of spins in system
+    num_hidden: int
+                number of hidden units in RNN
+    lr:         float
+                learning rate
+    num_epochs: int
+                number of epochs of training
 
-        returns:    None
-                    saves, does not return anything
+    returns:    None
+                saves, does not return anything
     """
 
     # -------- Getting data from all spins
@@ -39,7 +39,9 @@ def plot_converged_min_energy(
 
     for N in N_list:
         temp_study = "N{0}_nh{1}_lr{2}_ep{3}".format(N, num_hidden, lr, num_epochs)
-        data_file = "training_results_rnn_{0}_{1}_seed1.txt".format(model_name, temp_study)
+        data_file = "training_results_rnn_{0}_{1}_seed1.txt".format(
+            model_name, temp_study
+        )
 
         data_path = "{0}_results/{1}/{2}".format(model_name, temp_study, data_file)
 
