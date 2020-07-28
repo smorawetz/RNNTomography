@@ -58,32 +58,44 @@ def plot_compare_log_fid_energy(model_names, num_spinss, num_hidden, lrs, num_ep
         "xy_soft_symm": "'Soft' symmetry",
     }
 
+    all_spins_same = num_spinss.count(num_spinss[0]) == len(num_spinss)
+
     for i in range(num_studies):
         data = data_list[i]
         epochs = data[:, 0]
         fids = data[:, 1]
         energies = data[:, 3]
+        energy_errors = data[:, -1]
 
         ax = axs[0, i]
         ax.plot(
             epochs, energies, "o", color="C0", markeredgecolor="black",
         )
         ax.set_yscale("log")
-        ax.set_title(
-            r"{0}, N = {1}".format(nice_names_dict[model_names[i]], num_spinss[i])
-        )
+        if all_spins_same:
+            ax.set_title(
+                r"{0}".format(nice_names_dict[model_names[i]])
+            )
+        else:
+            ax.set_title(
+                r"{0}, N = {1}".format(nice_names_dict[model_names[i]], num_spinss[i])
+            )
         ax.set_ylim(6e-7, 2)
         if i == 0:
-            ax.set_ylabel(r"$\frac{|E_{RNN} - E_{targ}|}{N}$")
+            ax.set_ylabel(r"$\frac{|E_{RNN} - E_{DMRG}|}{N}$")
 
         ax = axs[1, i]
         ax.set_yscale("log")
         if num_spinss[i] <= 12:
             ax.plot(epochs, (1 - fids), "o", color="C0", markeredgecolor="black")
             if i == 0:
-                ax.set_ylabel(r"$\log|1 - Fidelity|$")
+                ax.set_ylabel(r"$1 - \mathcal{F}$")
 
     plt.subplots_adjust(wspace=0, hspace=0)
+    if all_spins_same:  # if all same N
+        fig.text(0.5, 0.96, r"Effect of symmetry on training, N = {0}".format(num_spinss[i]), ha="center", fontsize=16)
+    else:
+        fig.text(0.5, 0.96, r"Effect of symmetry on training", ha="center", fontsize=16)
     fig.text(0.5, 0.02, r"Epoch", ha="center")
 
     compare_names = []

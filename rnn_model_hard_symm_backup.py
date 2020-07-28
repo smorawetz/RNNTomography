@@ -57,7 +57,7 @@ def energy(wavefunction, true_energy, model_name, num_samples=100, J=1, B=1):
     E /= wavefunction.num_spins
     E -= true_energy  # this is already normalized by N
     avg = abs(torch.mean(E).item())
-    stdev = torch.std(E).item()
+    stdev = torch.std(E, unbiased=False).item()
     stdev /= np.sqrt(num_samples - 1)
 
     return avg, stdev

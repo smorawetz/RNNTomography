@@ -50,10 +50,16 @@ def plot_compare_energy(model_names, num_spinss, num_hidden, lrs, num_epochs):
         data = data_list[i]
         epochs = data[:, 0]
         energies = data[:, 3]
+        energy_errors = data[:, -1]
 
         ax = axs[i]
-        ax.plot(
-            epochs, energies, "o", color="C0", markeredgecolor="black",
+        ax.errorbar(
+            epochs,
+            energies,
+            yerr=energy_errors,
+            fmt="o",
+            color="C0",
+            markeredgecolor="black",
         )
         ax.set_title(r"{0}, N = {1}".format(model_names[i].upper(), num_spinss[i]))
         if i == 0:
