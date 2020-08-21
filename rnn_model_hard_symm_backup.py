@@ -24,7 +24,7 @@ param_init_dist = torch.nn.init.normal_
 # Compute average energy of RNN samples
 
 
-def energy(wavefunction, true_energy, model_name, num_samples=100, J=1, B=1):
+def energy(wavefunction, true_energy, model_name, num_samples=100, J=1, B=1, return_list=False):
     """
     wavefunction:   PositiveWaveFunction
                     trained RNN parametrization of state
@@ -56,6 +56,10 @@ def energy(wavefunction, true_energy, model_name, num_samples=100, J=1, B=1):
     E = energy_function(wavefunction, samples_hot, samples, num_samples, **kwargs)
     E /= wavefunction.num_spins
     E -= true_energy  # this is already normalized by N
+
+    if return_list:  # useful when doing parallel sample-drawing
+        return E
+
     avg = abs(torch.mean(E).item())
     stdev = torch.std(E, unbiased=False).item()
     stdev /= np.sqrt(num_samples - 1)

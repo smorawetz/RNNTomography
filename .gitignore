@@ -1,13 +1,8 @@
 # Ignore contents of results, training and legacy folders
 __pycache__
-results/*
-!results/.gitkeep
-!results/*plot*
-graham_results/*
-!graham_results/*plot*
-!graham_results/energies
-!graham_results/compare_results
-training/*
-!training/.gitkeep
-legacy
 Datasets
+graham_results/*results
+landscape_visualization/*results
+legacy
+results
+training

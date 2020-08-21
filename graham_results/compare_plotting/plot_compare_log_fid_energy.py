@@ -54,8 +54,10 @@ def plot_compare_log_fid_energy(model_names, num_spinss, num_hidden, lrs, num_ep
 
     nice_names_dict = {
         "xy_no_symm": "No symmetry",
-        "xy_hard_symm": "'Hard' symmetry",
-        "xy_soft_symm": "'Soft' symmetry",
+        "xy_hard_symm": "Symmetry imposed",
+        "xy_soft_symm": "Soft symmetry",
+        "xy_track_symm": "XY Model",
+        "tfim_track_symm": "TFIM",
     }
 
     all_spins_same = num_spinss.count(num_spinss[0]) == len(num_spinss)
@@ -82,7 +84,8 @@ def plot_compare_log_fid_energy(model_names, num_spinss, num_hidden, lrs, num_ep
             )
         ax.set_ylim(6e-7, 2)
         if i == 0:
-            ax.set_ylabel(r"$\frac{|E_{RNN} - E_{DMRG}|}{N}$")
+            # ax.set_ylabel(r"$\frac{|E_{RNN} - E_{DMRG}|}{N}$")
+            ax.set_ylabel(r"$\varepsilon$")
 
         ax = axs[1, i]
         ax.set_yscale("log")
@@ -92,11 +95,11 @@ def plot_compare_log_fid_energy(model_names, num_spinss, num_hidden, lrs, num_ep
                 ax.set_ylabel(r"$1 - \mathcal{F}$")
 
     plt.subplots_adjust(wspace=0, hspace=0)
-    if all_spins_same:  # if all same N
-        fig.text(0.5, 0.96, r"Effect of symmetry on training, N = {0}".format(num_spinss[i]), ha="center", fontsize=16)
-    else:
-        fig.text(0.5, 0.96, r"Effect of symmetry on training", ha="center", fontsize=16)
-    fig.text(0.5, 0.02, r"Epoch", ha="center")
+    # if all_spins_same:  # if all same N
+        # fig.text(0.5, 0.96, r"Effect of symmetry on training, N = {0}".format(num_spinss[i]), ha="center", fontsize=16)
+    # else:
+        # fig.text(0.5, 0.96, r"Effect of symmetry on training", ha="center", fontsize=16)
+    fig.text(0.51, 0.02, r"Epoch", ha="center")
 
     compare_names = []
     for i in range(num_studies):
@@ -111,4 +114,4 @@ def plot_compare_log_fid_energy(model_names, num_spinss, num_hidden, lrs, num_ep
     if not os.path.exists("compare_results/{0}".format(compare_name)):
         os.makedirs("compare_results/{0}".format(compare_name))
 
-    plt.savefig("compare_results/{0}/compare_log_fid_energy.png".format(compare_name))
+    plt.savefig("compare_results/{0}/compare_log_fid_energy.pdf".format(compare_name))

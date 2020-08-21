@@ -68,7 +68,7 @@ def run_training(
         true_state = torch.Tensor(np.loadtxt(state_path)[:, 0])
 
     # Name chosen for this model to store data under
-    model_name = "{0}_hard_symm".format(data_name)
+    model_name = "{0}_long_hard_symm".format(data_name)
 
     # Make folder to store outputs if it does not already exist
     results_path = "../results/{0}_results".format(model_name)

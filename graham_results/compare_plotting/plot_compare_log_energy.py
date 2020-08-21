@@ -76,4 +76,4 @@ def plot_compare_log_energy(model_names, num_spinss, num_hidden, lrs, num_epochs
     if not os.path.exists("compare_results/{0}".format(compare_name)):
         os.makedirs("compare_results/{0}".format(compare_name))
 
-    plt.savefig("compare_results/{0}/compare_log_energy.png".format(compare_name))
+    plt.savefig("compare_results/{0}/compare_log_energy.pdf".format(compare_name))

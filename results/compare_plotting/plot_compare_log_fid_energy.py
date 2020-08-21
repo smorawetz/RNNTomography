@@ -35,7 +35,7 @@ def plot_compare_log_fid_energy(model_names, num_spinss, num_hidden, lrs, num_ep
             num_spins, num_hidden, lr, num_epochs
         )
         study_path = "{0}_results/{1}".format(model_name, study_name)
-        data_file = "training_results_rnn_{0}_{1}.txt".format(model_name, study_name)
+        data_file = "training_results_rnn_{0}_{1}_seed1.txt".format(model_name, study_name)
         data_path = "{0}_results/{1}/{2}".format(model_name, study_name, data_file)
 
         data_list.append(np.loadtxt(data_path))
