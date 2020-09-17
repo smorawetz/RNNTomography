@@ -66,7 +66,11 @@ def plot_compare_fid_energy(model_names, num_spinss, num_hidden, lrs, num_epochs
 
         ax = axs[0, i]
         ax.plot(
-            epochs, energies, "o", color="C0", markeredgecolor="black",
+            epochs,
+            energies,
+            "o",
+            color="C0",
+            markeredgecolor="black",
         )
         ax.set_yscale("log")
         ax.set_title(

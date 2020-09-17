@@ -67,7 +67,7 @@ if CALCULATE_AVGS:
                     energy_val = np.loadtxt("energies/energy_N{0}.txt".format(N)).item()
 
                     if False:
-                    # if NUM_SAMPLES > NUM_AT_ONCE:
+                        # if NUM_SAMPLES > NUM_AT_ONCE:
                         E_list = []
                         print(N)
                         for i in range(NUM_SAMPLES // NUM_AT_ONCE):

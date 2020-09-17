@@ -38,7 +38,11 @@ def plot_late_symm_fid(model_name, num_spins, num_hidden, lr, num_epochs):
     fig, ax = plt.subplots()
 
     ax.plot(
-        epochs, fids, "o", color="C0", markeredgecolor="black",
+        epochs,
+        fids,
+        "o",
+        color="C0",
+        markeredgecolor="black",
     )
     ax.set_title(r"Fidelity for {0}, N = {1}".format(model_name.upper(), num_spins))
     ax.set_xlabel(r"Epoch")

@@ -104,7 +104,7 @@ for i in range(len(MODEL_NAMES)):
     energy_stdevs = energy_stdevs_dict[model_name]
     label = legend_dict[model_name]
     colour = colours[i]
-    ax.set_yscale('log')
+    ax.set_yscale("log")
     ax.errorbar(  # main plot with errorbars
         N_VALS,
         energy_avgs,

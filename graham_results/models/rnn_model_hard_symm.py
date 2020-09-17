@@ -24,7 +24,9 @@ param_init_dist = torch.nn.init.normal_
 # Compute average energy of RNN samples
 
 
-def energy(wavefunction, true_energy, model_name, num_samples=100, J=1, B=1, return_list=False):
+def energy(
+    wavefunction, true_energy, model_name, num_samples=100, J=1, B=1, return_list=False
+):
     """
     wavefunction:   PositiveWaveFunction
                     trained RNN parametrization of state

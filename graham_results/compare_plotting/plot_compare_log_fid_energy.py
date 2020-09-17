@@ -71,13 +71,15 @@ def plot_compare_log_fid_energy(model_names, num_spinss, num_hidden, lrs, num_ep
 
         ax = axs[0, i]
         ax.plot(
-            epochs, energies, "o", color="C0", markeredgecolor="black",
+            epochs,
+            energies,
+            "o",
+            color="C0",
+            markeredgecolor="black",
         )
         ax.set_yscale("log")
         if all_spins_same:
-            ax.set_title(
-                r"{0}".format(nice_names_dict[model_names[i]])
-            )
+            ax.set_title(r"{0}".format(nice_names_dict[model_names[i]]))
         else:
             ax.set_title(
                 r"{0}, N = {1}".format(nice_names_dict[model_names[i]], num_spinss[i])
@@ -96,9 +98,9 @@ def plot_compare_log_fid_energy(model_names, num_spinss, num_hidden, lrs, num_ep
 
     plt.subplots_adjust(wspace=0, hspace=0)
     # if all_spins_same:  # if all same N
-        # fig.text(0.5, 0.96, r"Effect of symmetry on training, N = {0}".format(num_spinss[i]), ha="center", fontsize=16)
+    # fig.text(0.5, 0.96, r"Effect of symmetry on training, N = {0}".format(num_spinss[i]), ha="center", fontsize=16)
     # else:
-        # fig.text(0.5, 0.96, r"Effect of symmetry on training", ha="center", fontsize=16)
+    # fig.text(0.5, 0.96, r"Effect of symmetry on training", ha="center", fontsize=16)
     fig.text(0.51, 0.02, r"Epoch", ha="center")
 
     compare_names = []

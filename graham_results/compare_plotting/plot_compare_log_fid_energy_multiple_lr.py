@@ -113,7 +113,10 @@ def plot_compare_log_fid_energy(model_names, num_spinss, num_hidden, lrs, num_ep
 
     compare_names = []
     for i in range(num_studies):
-        name = "{0}_N{1}_".format(model_names[i], num_spinss[i],)
+        name = "{0}_N{1}_".format(
+            model_names[i],
+            num_spinss[i],
+        )
         compare_names.append(name)
 
     compare_name = ""

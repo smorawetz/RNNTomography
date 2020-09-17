@@ -38,7 +38,11 @@ def plot_energy_log(model_name, num_spins, num_hidden, lr, num_epochs):
     fig, ax = plt.subplots()
 
     ax.plot(
-        epochs, energies, "o", color="C0", markeredgecolor="black",
+        epochs,
+        energies,
+        "o",
+        color="C0",
+        markeredgecolor="black",
     )
     ax.set_yscale("log")
     ax.set_title(

@@ -16,8 +16,8 @@ PLOTS_DICT = {
 LIST_OF_PHYSICS_MODELS = [["xy", "xy"]]
 LIST_OF_SYMM_TYPES = [["no_symm", "hard_symm"]]
 N_VALS = [10, 10]
-LIST_OF_RANGES = [[1.0, 1.0], [5.0, 5.0], [10.0, 10.0]]
-
+# LIST_OF_RANGES = [[0.25, 0.25], [1.0, 1.0], [5.0, 5.0]]
+LIST_OF_RANGES = [[0.25, 0.25]]
 
 for i in range(len(LIST_OF_PHYSICS_MODELS)):
     physics_models = LIST_OF_PHYSICS_MODELS[i]

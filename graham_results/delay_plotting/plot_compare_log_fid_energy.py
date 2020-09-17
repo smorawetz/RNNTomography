@@ -76,7 +76,11 @@ def plot_compare_log_fid_energy(
 
         ax = axs[0, i]
         ax.plot(
-            epochs, energies, "o", color="C0", markeredgecolor="black",
+            epochs,
+            energies,
+            "o",
+            color="C0",
+            markeredgecolor="black",
         )
         ax.axvline(x=delay_eps[i], color="C3", linestyle="--")
         ax.set_yscale("log")

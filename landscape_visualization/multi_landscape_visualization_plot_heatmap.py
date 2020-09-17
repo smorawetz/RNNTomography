@@ -139,21 +139,25 @@ def multi_loss_plot_heatmap(physics_models, symm_types, Ns, max_changes):
             betas.append(beta)
 
 
-        # norm = colors.LogNorm(vmin=loss_data.min(), vmax=loss_data.max())
-        norm = colors.Normalize(vmin=loss_data.min(), vmax=loss_data.max())
+        norm = colors.LogNorm(vmin=loss_data.min(), vmax=loss_data.max())
+        # norm = colors.Normalize(vmin=loss_data.min(), vmax=loss_data.max())
+
+        # cmap = "YlGn" if max_change >= 1 else "jet"
+        cmap = "YlGn"
 
         ax = axs[i]
         contour = ax.imshow(
             loss_data,
-            cmap="YlGn",
+            cmap=cmap,
             norm=norm,
             extent=[-max_change, max_change, -max_change, max_change],
         )
         ax.set_xlim(-max_change, max_change)
         ax.set_ylim(-max_change, max_change)
         fig.colorbar(contour, ax=ax)
-        ax.plot(alphas, betas, color="C0", linestyle="-")
-        ax.scatter(alphas[::40], betas[::40], color="C3")
+        if max_change >= 1:
+            ax.plot(alphas, betas, color="C0", linestyle="-")
+            ax.scatter(alphas[::40], betas[::40], color="C3")
 
         x0, x1 = ax.get_xlim()
         y0, y1 = ax.get_ylim()

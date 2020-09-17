@@ -65,7 +65,8 @@ ax.set_xlabel(r"Epoch")
 ax.set_ylabel(r"Average abs. gradient value")
 
 plt.savefig(
-    "{0}_results/{1}/avg_grads_plot_{0}_{1}.png".format(FILENAME, STUDY_NAME), dpi=1000,
+    "{0}_results/{1}/avg_grads_plot_{0}_{1}.png".format(FILENAME, STUDY_NAME),
+    dpi=1000,
 )
 
 
@@ -86,7 +87,8 @@ ax.set_xlabel(r"Epoch")
 ax.set_ylabel(r"Average abs. gradient value")
 
 plt.savefig(
-    "{0}_results/{1}/max_grads_plot_{0}_{1}.png".format(FILENAME, STUDY_NAME), dpi=1000,
+    "{0}_results/{1}/max_grads_plot_{0}_{1}.png".format(FILENAME, STUDY_NAME),
+    dpi=1000,
 )
 
 
@@ -108,7 +110,7 @@ for par_num in range(num_pars):
     # Want to compute WEIGHTED average of parameter gradients
     weight = num_pars_dict[par_num]
     avgs_per_ep += weight * avg_grad_data[:, par_num]
-    
+
 norm = 0
 for weight in num_pars_dict.values():
     norm += weight
@@ -120,5 +122,6 @@ ax.set_xlabel(r"Epoch")
 ax.set_ylabel(r"Average parameter gradient")
 
 plt.savefig(
-    "{0}_results/{1}/total_avg_grads_plot_{0}_{1}.png".format(FILENAME, STUDY_NAME), dpi=1000,
+    "{0}_results/{1}/total_avg_grads_plot_{0}_{1}.png".format(FILENAME, STUDY_NAME),
+    dpi=1000,
 )

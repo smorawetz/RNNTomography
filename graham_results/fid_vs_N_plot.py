@@ -89,7 +89,7 @@ for i in range(len(MODEL_NAMES)):
         capsize=5,
         color=colour,
     )
-    ax.set_yscale('log')
+    ax.set_yscale("log")
     # ax.plot(N_VALS, np.poly1d(np.polyfit(energy_avgs, fid_avgs, 1))(energy_avgs), linestyle="dashed", color=colour)
 ax.legend()
 ax.set_title(r"Fidelity vs average energy of samples generated at convergence")

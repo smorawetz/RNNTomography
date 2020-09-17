@@ -39,7 +39,11 @@ def plot_fid_error_log(model_name, num_spins, num_hidden, lr, num_epochs):
     fig, ax = plt.subplots(figsize=(14, 3))
 
     ax.plot(
-        epochs, 1 - fids, "o", color="C0", markeredgecolor="black",
+        epochs,
+        1 - fids,
+        "o",
+        color="C0",
+        markeredgecolor="black",
     )
     ax.set_yscale("log")
     ax.set_title(

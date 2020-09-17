@@ -38,7 +38,11 @@ def plot_energy(model_name, num_spins, num_hidden, lr, num_epochs):
     fig, ax = plt.subplots()
 
     ax.plot(
-        epochs, energies, "o", color="C0", markeredgecolor="black",
+        epochs,
+        energies,
+        "o",
+        color="C0",
+        markeredgecolor="black",
     )
     ax.set_title(
         r"Abs. difference in model and target energy for {0}, N = {1}".format(

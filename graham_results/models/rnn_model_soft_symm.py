@@ -326,12 +326,13 @@ def log_prob(nn_outputs, data):
 
 # Compute n permute k for an entire array, element-wise
 
+
 def n_perm_k(n, k_tensor):
     """
     n:          int
                 value to use for n in n permute k
     k_tensor:   torch.Tensor
-                tensor of values to use for k in n permute k 
+                tensor of values to use for k in n permute k
 
     returns:    torch.Tensor
                 tensor where i-th element is n permute k_tensor[i]

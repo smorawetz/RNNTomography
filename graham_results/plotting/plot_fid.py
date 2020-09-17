@@ -40,7 +40,11 @@ def plot_fid(model_name, num_spins, num_hidden, lr, num_epochs):
 
     ax = axs[0]
     ax.plot(
-        epochs, fids, "o", color="C0", markeredgecolor="black",
+        epochs,
+        fids,
+        "o",
+        color="C0",
+        markeredgecolor="black",
     )
     ax.set_title(
         r"Reconstruction Fidelity for {0}, N = {1}".format(
@@ -53,7 +57,11 @@ def plot_fid(model_name, num_spins, num_hidden, lr, num_epochs):
 
     ax = axs[1]
     ax.plot(
-        epochs, divs, "o", color="C1", markeredgecolor="black",
+        epochs,
+        divs,
+        "o",
+        color="C1",
+        markeredgecolor="black",
     )
     ax.set_title(
         r"Reconstruction KL divergence for {0}, N = {1}".format(

@@ -49,7 +49,7 @@ def plot_compare_log_fid(model_names, num_spinss, num_hidden, lrs, num_epochs):
         ncols=num_studies,
         sharex="col",
         sharey="row",
-        figsize=(8,4),
+        figsize=(8, 4),
     )
 
     nice_names_dict = {
@@ -72,9 +72,7 @@ def plot_compare_log_fid(model_names, num_spinss, num_hidden, lrs, num_epochs):
         ax = axs[i]
         ax.set_yscale("log")
         if all_spins_same:
-            ax.set_title(
-                r"{0}".format(nice_names_dict[model_names[i]])
-            )
+            ax.set_title(r"{0}".format(nice_names_dict[model_names[i]]))
         else:
             ax.set_title(
                 r"{0}, N = {1}".format(nice_names_dict[model_names[i]], num_spinss[i])

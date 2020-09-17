@@ -55,6 +55,8 @@ def loss_plot_3d(physics_model, symm_type, N, max_change):
         # points_tuple, loss_points, grid_tuple, method="cubic"
     # )
 
+    fig = plt.figure()
+    ax = fig.gca(projection="3d")
     # ax.plot_surface(grid_alphas, grid_betas, interp_vals)  # interpolation
     ax.plot_surface(grid_alphas, grid_betas, loss_data)
 

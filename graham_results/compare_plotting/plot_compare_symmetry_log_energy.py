@@ -2,6 +2,8 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
 params = {
     "text.usetex": True,
     "font.family": "serif",
@@ -12,6 +14,8 @@ params = {
     "lines.linewidth": 1,
     "patch.edgecolor": "black",
 }
+
+seed_dict = { 30: "1234", 40: "1357", 50: "2222" }
 
 
 def plot_compare_symmetry_log_energy(
@@ -39,6 +43,9 @@ def plot_compare_symmetry_log_energy(
     # --------- Getting data for each study -------------
 
     data_list = []
+
+    rbm_epochs_list = []
+    rbm_energies_list = []
 
     for i in range(num_studies):
         model_name = model_names[i]
@@ -69,13 +76,31 @@ def plot_compare_symmetry_log_energy(
 
         data_list.append(np.loadtxt(data_path))
 
+        rbm_hidden = num_spins  # NOTE: Change this with new data
+        rbm_seed = seed_dict[num_spins]
+
+        rbm_energy_file = "rbm_results/energies/energies_errors_N={0}_nh={1}_seed={2}_SGD_Gibbs.txt".format(
+            num_spins, rbm_hidden, rbm_seed
+        )
+        rbm_energy_data = np.loadtxt(rbm_energy_file)
+
+        rbm_period = 100
+        rbm_max_ep = 2000
+        rbm_last_index = rbm_max_ep // rbm_period
+
+        rbm_epochs = np.arange(rbm_period, rbm_max_ep + 1, rbm_period)
+        rbm_energies = rbm_energy_data[:rbm_last_index, 1]
+
+        rbm_epochs_list.append(rbm_epochs)
+        rbm_energies_list.append(rbm_energies)
+
     # -------- Make the plot ----------
 
-    fig, axs = plt.subplots(nrows=1, ncols=num_studies, sharey=True, figsize=(10, 4))
+    fig, axs = plt.subplots(nrows=1, ncols=num_studies, sharey=True, figsize=(13, 3.5))
 
     nice_names_dict = {
-        "xy_no_symm": "No symmetry",
-        "xy_hard_symm": "Symmetry imposed",
+        "xy_no_symm": "Symmetry-free RNN",
+        "xy_hard_symm": "Symmetry-imposed RNN",
         "xy_soft_symm": "Soft symmetry",
     }
 
@@ -105,8 +130,20 @@ def plot_compare_symmetry_log_energy(
         if i == num_studies:
             ax.set_xlabel(r"Epoch")
 
+        if i % 2 == 0:  # only plot one RBM per size
+            rbm_epochs = rbm_epochs_list[i // 2]
+            rbm_energies = rbm_energies_list[i // 2]
+            ax.plot(
+                rbm_epochs,
+                rbm_energies,
+                "s",
+                color="C2",
+                markeredgecolor="black",
+                label="Symmetry-free RBM" if i // 2 == 0 else "",
+            )
+
     plt.subplots_adjust(wspace=0)
-    fig.legend(loc=(0.79, 0.79), frameon=False)
+    fig.legend(loc=(0.79, 0.52), frameon=False)
 
     plt.tight_layout(rect=[0, 0.02, 1, 1])
 

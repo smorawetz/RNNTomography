@@ -53,7 +53,11 @@ def plot_compare_log_energy(model_names, num_spinss, num_hidden, lrs, num_epochs
 
         ax = axs[i]
         ax.plot(
-            epochs, energies, "o", color="C0", markeredgecolor="black",
+            epochs,
+            energies,
+            "o",
+            color="C0",
+            markeredgecolor="black",
         )
         ax.set_yscale("log")
         ax.set_title(r"{0}, N = {1}".format(model_names[i].upper(), num_spinss[i]))
